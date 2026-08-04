@@ -2,51 +2,68 @@ import React from 'react';
 
 interface BajajLogoProps {
   className?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
 export const BajajLogo: React.FC<BajajLogoProps> = ({ className = '', size = 'md' }) => {
   const boxSizes = {
-    sm: 'w-7 h-7 text-[7px]',
-    md: 'w-9 h-9 text-[9px]',
-    lg: 'w-11 h-11 text-[10px]',
+    sm: 'w-8 h-8 p-1',
+    md: 'w-11 h-11 p-1.5 sm:w-12 sm:h-12',
+    lg: 'w-14 h-14 p-2 sm:w-16 sm:h-16',
+    xl: 'w-20 h-20 p-2.5',
   };
 
   const textSizes = {
-    sm: 'text-xs',
-    md: 'text-sm sm:text-base',
-    lg: 'text-lg sm:text-xl',
+    sm: 'text-base font-black',
+    md: 'text-xl sm:text-2xl font-black',
+    lg: 'text-2xl sm:text-3xl font-black',
+    xl: 'text-4xl font-black',
+  };
+
+  const subtextSizes = {
+    sm: 'text-[8px]',
+    md: 'text-[10px]',
+    lg: 'text-xs',
+    xl: 'text-sm',
   };
 
   return (
-    <div className={`flex items-center space-x-2 select-none ${className}`}>
-      {/* Blue Box with White Bajaj Wing Emblem & BAJAJ Text */}
+    <div className={`flex items-center space-x-2.5 sm:space-x-3 select-none ${className}`}>
+      {/* Official Bajaj Blue Square Container with White Flying Wing Emblem + BAJAJ Text */}
       <div
-        className={`${boxSizes[size]} bg-[#024b9c] rounded-lg flex flex-col items-center justify-center text-white shadow-xs font-black tracking-tighter transition-transform hover:scale-105 shrink-0`}
+        className={`${boxSizes[size]} bg-[#005cb9] rounded-md sm:rounded-lg flex flex-col items-center justify-between text-white shadow-md font-black tracking-tighter transition-all hover:scale-105 shrink-0 border border-blue-400/30`}
       >
         {/* Bajaj Flying Wing Emblem SVG */}
-        <svg
-          className="w-[60%] h-[45%] fill-current text-white"
-          viewBox="0 0 100 60"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          {/* Authentic Bajaj Wing Geometry */}
-          <path d="M12 48 L42 12 C46 7, 54 7, 58 12 L88 48 C92 53, 86 58, 80 54 L50 32 L20 54 C14 58, 8 53, 12 48 Z" />
-          <path d="M32 46 L50 32 L68 46 L50 20 Z" opacity="0.4" />
-        </svg>
-        <span className="leading-none mt-0.5 tracking-widest font-extrabold uppercase scale-90">
+        <div className="w-full flex-1 flex items-center justify-center pt-0.5">
+          <svg
+            className="w-[85%] h-[85%] fill-white"
+            viewBox="0 0 100 65"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {/* Upper Wing Polygon */}
+            <polygon points="26,6 78,28 54,28 10,8" />
+            {/* Middle Main Wing Polygon */}
+            <polygon points="22,22 88,48 62,48 8,24" />
+            {/* Lower Shadow Wing Polygon */}
+            <polygon points="36,40 76,56 56,56 22,42" />
+          </svg>
+        </div>
+
+        {/* BAJAJ Text at Bottom of Square */}
+        <span className="leading-none pb-0.5 tracking-widest font-black uppercase text-[8px] sm:text-[10px] scale-95 font-sans">
           BAJAJ
         </span>
       </div>
 
-      {/* CREDIT Text in Bajaj Blue */}
+      {/* CREDIT Text in Matching Bajaj Blue */}
       <div className="flex flex-col justify-center">
         <span
-          className={`font-black ${textSizes[size]} text-[#024b9c] dark:text-blue-400 tracking-tight leading-none uppercase`}
+          className={`font-black ${textSizes[size]} text-[#005cb9] dark:text-blue-400 tracking-tight leading-none uppercase font-sans`}
+          style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
         >
           CREDIT
         </span>
-        <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 tracking-wider leading-none mt-0.5 uppercase hidden sm:inline-block">
+        <span className={`font-bold text-slate-500 dark:text-slate-400 tracking-wider leading-none mt-1 uppercase ${subtextSizes[size]}`}>
           Bajaj Auto Credit Ltd.
         </span>
       </div>

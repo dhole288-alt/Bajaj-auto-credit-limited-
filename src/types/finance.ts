@@ -79,8 +79,19 @@ export interface TenureCalculation {
   advanceEmiAmount: number;
   totalCharges: number; // serviceCharge + stampDuty + additionalUpfront + paCharge + rsaCharge + upfrontInterest
   downPayment: number; // (Showroom ORP - Loan Amount) + totalCharges + advanceEmiAmount
-  totalPayableAmount: number; // (EMI * tenureMonths) + downPayment
+  totalPayableAmount: number; // downPayment + EMI * (tenureMonths - advanceEmiCount) = Showroom ORP + totalCharges + totalInterest
   ltvPercent: number; // (Loan Amount / SFDC ORP) * 100
+  appliedRoi: number; // Annual ROI % applied for this tenure
+  rawEmi: number; // Unrounded exact EMI
+  priceMargin: number; // Showroom ORP - Loan Amount
+  advanceEmiCount: number; // Number of advance EMIs
+  debugFormula?: {
+    pmtFormula: string;
+    downPaymentFormula: string;
+    totalPayableFormula: string;
+    serviceChargeFormula: string;
+    stampDutyFormula: string;
+  };
 }
 
 export interface LoanEligibilityResult {

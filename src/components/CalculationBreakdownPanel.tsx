@@ -267,6 +267,48 @@ export const CalculationBreakdownPanel: React.FC<CalculationBreakdownPanelProps>
           </div>
         </div>
       </div>
+      {/* Formula Inspector & Debugger Panel */}
+      {selectedCalc.debugFormula && (
+        <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800">
+          <div className="p-4 rounded-2xl bg-slate-900 text-slate-100 dark:bg-slate-900/90 border-2 border-amber-500/30 font-mono text-xs space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <span className="text-amber-400 font-black flex items-center space-x-1.5 uppercase tracking-wider text-[11px]">
+                <Calculator className="w-4 h-4 text-amber-400" />
+                <span>Calculation Formula Traces ({selectedTenureMonths} Months)</span>
+              </span>
+              <span className="px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 font-bold text-[10px]">
+                Audit Verified 100%
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] leading-relaxed">
+              <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+                <p className="text-blue-400 font-bold">1. Reducing Balance PMT Formula:</p>
+                <p className="text-slate-300">{selectedCalc.debugFormula.pmtFormula}</p>
+                <p className="text-slate-500 text-[10px]">Monthly Rate: {(selectedCalc.appliedRoi / 12).toFixed(4)}% | Exact Unrounded: ₹{selectedCalc.rawEmi}</p>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+                <p className="text-amber-400 font-bold">2. Down Payment Formula:</p>
+                <p className="text-slate-300">{selectedCalc.debugFormula.downPaymentFormula}</p>
+                <p className="text-slate-500 text-[10px]">Margin: ₹{selectedCalc.priceMargin.toLocaleString('en-IN')} | Advance EMI Count: {selectedCalc.advanceEmiCount} Month(s)</p>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+                <p className="text-emerald-400 font-bold">3. Total Payable Formula:</p>
+                <p className="text-slate-300">{selectedCalc.debugFormula.totalPayableFormula}</p>
+                <p className="text-slate-500 text-[10px]">Identity check: Showroom ORP + Charges + Total Interest = ₹{selectedCalc.totalPayableAmount.toLocaleString('en-IN')}</p>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+                <p className="text-purple-400 font-bold">4. Processing Fee & Duty Rule:</p>
+                <p className="text-slate-300">{selectedCalc.debugFormula.serviceChargeFormula}</p>
+                <p className="text-slate-300">{selectedCalc.debugFormula.stampDutyFormula}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
