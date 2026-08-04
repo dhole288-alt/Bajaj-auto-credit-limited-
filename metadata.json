@@ -1,0 +1,6 @@
+{
+  "name": "Finance EMI Calculator",
+  "description": "Comprehensive vehicle finance EMI calculator with scheme code lookup, LTV & ROI calculations, charges breakdown, Excel import/export, PDF quotation generator, and Admin scheme manager.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
