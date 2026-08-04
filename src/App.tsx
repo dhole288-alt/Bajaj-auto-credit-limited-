@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Scheme, CalculationInput, CustomerDetails, QuotationRecord } from './types/finance';
+import { MasterDatabase, VehicleMaster } from './types/masterData';
 import { DEFAULT_SCHEMES } from './data/defaultSchemes';
+import { DEFAULT_MASTER_DATABASE } from './data/masterDefaults';
 import {
   calculateAllTenures,
   getSchemeRoi,
@@ -69,31 +71,62 @@ export default function App() {
     localStorage.setItem('finance_schemes', JSON.stringify(schemes));
   }, [schemes]);
 
+  // Master Database state (Dealers, Branches, Vehicles, DMAs)
+  const [masterDb, setMasterDb] = useState<MasterDatabase>(() => {
+    const local = localStorage.getItem('finance_master_db');
+    if (local) {
+      try {
+        return JSON.parse(local);
+      } catch (e) {
+        console.error('Failed to parse saved master database', e);
+      }
+    }
+    return DEFAULT_MASTER_DATABASE;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('finance_master_db', JSON.stringify(masterDb));
+  }, [masterDb]);
+
   // Active Selected Scheme
   const [selectedScheme, setSelectedScheme] = useState<Scheme>(schemes[0] || DEFAULT_SCHEMES[0]);
 
   // Inputs
-  const [showroomOrp, setShowroomOrp] = useState<number>(105000);
-  const [sfdcOrp, setSfdcOrp] = useState<number>(100000);
-  const [loanAmount, setLoanAmount] = useState<number>(85000);
+  const [showroomOrp, setShowroomOrp] = useState<number>(152000);
+  const [sfdcOrp, setSfdcOrp] = useState<number>(122800);
+  const [loanAmount, setLoanAmount] = useState<number>(110000);
   const [customRoi, setCustomRoi] = useState<number | undefined>(undefined);
   const [paRequired, setPaRequired] = useState<boolean>(true);
   const [rsaRequired, setRsaRequired] = useState<boolean>(true);
 
-  // Customer details
+  // Customer & Dealership details
   const [customerDetails, setCustomerDetails] = useState<CustomerDetails>({
     customerName: 'Rahul Sharma',
     mobileNumber: '9876543210',
-    vehicleModel: 'Pulsar N160 Dual ABS',
-    dealerName: 'Apex Bajaj Showroom',
-    financeCompany: 'Bajaj Auto Credit Ltd.',
+    vehicleModel: 'Pulsar N160 Single ABS',
+    vehicleSku: 'SKU001',
+    dealerName: 'Wasan & Sons',
+    dealerBranch: 'Girnare',
+    financeCompany: 'BAJAJ AUTO CREDIT LIMITED',
     executiveName: 'EMP-9041',
+    dmaName: 'Atul Patil',
+    dmaCode: 'DMA001',
+    dmaContact: '9876543210',
     monthlyIncome: 45000,
     existingEmi: 3000,
   });
 
   const [selectedTenureMonths, setSelectedTenureMonths] = useState<number>(36);
   const [activeTab, setActiveTab] = useState<'calculator' | 'comparison' | 'amortization' | 'quotations' | 'admin'>('calculator');
+
+  // Handle vehicle SKU auto-selection
+  const handleSelectVehicleMaster = (vehicle: VehicleMaster) => {
+    setShowroomOrp(vehicle.onRoadPrice);
+    setSfdcOrp(vehicle.exShowroomPrice);
+    const calculatedMaxLoan = Math.round((vehicle.exShowroomPrice * selectedScheme.maxLtvPercent) / 100);
+    setLoanAmount(calculatedMaxLoan);
+    addToast('Vehicle Master Auto-Fill', `Loaded ${vehicle.vehicleModel} (${vehicle.skuCode}) On-Road ₹${vehicle.onRoadPrice.toLocaleString('en-IN')}`, 'info');
+  };
 
   // Saved Quotations history
   const [savedQuotations, setSavedQuotations] = useState<QuotationRecord[]>(() => {
@@ -326,6 +359,8 @@ _Generated via Bajaj Auto Credit Calculator Pro_`;
                   customerDetails={customerDetails}
                   onChangeDetails={setCustomerDetails}
                   eligibilityResult={eligibilityResult}
+                  masterDb={masterDb}
+                  onSelectVehicle={handleSelectVehicleMaster}
                 />
               </div>
             </div>
@@ -412,6 +447,12 @@ _Generated via Bajaj Auto Credit Calculator Pro_`;
               setSchemes={setSchemes}
               quotationRecords={savedQuotations}
               onResetDefaultSchemes={handleResetDefaultSchemes}
+              masterDb={masterDb}
+              setMasterDb={setMasterDb}
+              onResetDefaultMasterDb={() => {
+                setMasterDb(DEFAULT_MASTER_DATABASE);
+                addToast('Master DB Reset', 'Restored default dealers, vehicles, and DMA managers', 'info');
+              }}
             />
           </div>
         )}

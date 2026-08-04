@@ -44,9 +44,14 @@ export interface CustomerDetails {
   customerName: string;
   mobileNumber: string;
   vehicleModel: string;
+  vehicleSku?: string;
   dealerName: string;
-  financeCompany: string;
+  dealerBranch?: string;
+  financeCompany: string; // Fixed 'BAJAJ AUTO CREDIT LIMITED'
   executiveName?: string;
+  dmaName?: string;
+  dmaCode?: string;
+  dmaContact?: string;
   monthlyIncome?: number;
   existingEmi?: number;
 }
