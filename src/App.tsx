@@ -88,36 +88,92 @@ export default function App() {
     localStorage.setItem('finance_master_db', JSON.stringify(masterDb));
   }, [masterDb]);
 
-  // Active Selected Scheme
-  const [selectedScheme, setSelectedScheme] = useState<Scheme>(schemes[0] || DEFAULT_SCHEMES[0]);
+  // Active Selected Scheme & Input State Persistence
+  const savedCalcState = (() => {
+    const local = localStorage.getItem('finance_calculator_state');
+    if (local) {
+      try {
+        return JSON.parse(local);
+      } catch (e) {
+        console.error('Failed to parse saved calculator state', e);
+      }
+    }
+    return null;
+  })();
 
-  // Inputs
-  const [showroomOrp, setShowroomOrp] = useState<number>(152000);
-  const [sfdcOrp, setSfdcOrp] = useState<number>(122800);
-  const [loanAmount, setLoanAmount] = useState<number>(110000);
-  const [customRoi, setCustomRoi] = useState<number | undefined>(undefined);
-  const [paRequired, setPaRequired] = useState<boolean>(true);
-  const [rsaRequired, setRsaRequired] = useState<boolean>(true);
-
-  // Customer & Dealership details
-  const [customerDetails, setCustomerDetails] = useState<CustomerDetails>({
-    customerName: 'Rahul Sharma',
-    mobileNumber: '9876543210',
-    vehicleModel: 'Pulsar N160 Single ABS',
-    vehicleSku: 'SKU001',
-    dealerName: 'Wasan & Sons',
-    dealerBranch: 'Girnare',
-    financeCompany: 'BAJAJ AUTO CREDIT LIMITED',
-    executiveName: 'EMP-9041',
-    dmaName: 'Atul Patil',
-    dmaCode: 'DMA001',
-    dmaContact: '9876543210',
-    monthlyIncome: 45000,
-    existingEmi: 3000,
+  const [selectedScheme, setSelectedScheme] = useState<Scheme>(() => {
+    if (savedCalcState?.selectedSchemeCode) {
+      const found = schemes.find((s) => s.schemeCode === savedCalcState.selectedSchemeCode);
+      if (found) return found;
+    }
+    return schemes[0] || DEFAULT_SCHEMES[0];
   });
 
-  const [selectedTenureMonths, setSelectedTenureMonths] = useState<number>(36);
-  const [activeTab, setActiveTab] = useState<'calculator' | 'comparison' | 'amortization' | 'quotations' | 'admin'>('calculator');
+  // Inputs
+  const [showroomOrp, setShowroomOrp] = useState<number>(savedCalcState?.showroomOrp ?? 152000);
+  const [sfdcOrp, setSfdcOrp] = useState<number>(savedCalcState?.sfdcOrp ?? 122800);
+  const [loanAmount, setLoanAmount] = useState<number>(savedCalcState?.loanAmount ?? 110000);
+  const [customRoi, setCustomRoi] = useState<number | undefined>(savedCalcState?.customRoi);
+  const [paRequired, setPaRequired] = useState<boolean>(savedCalcState?.paRequired ?? true);
+  const [rsaRequired, setRsaRequired] = useState<boolean>(savedCalcState?.rsaRequired ?? true);
+
+  // Customer & Dealership details
+  const [customerDetails, setCustomerDetails] = useState<CustomerDetails>(() => {
+    if (savedCalcState?.customerDetails) {
+      return {
+        ...savedCalcState.customerDetails,
+        financeCompany: 'BAJAJ AUTO CREDIT LIMITED',
+      };
+    }
+    return {
+      customerName: 'Rahul Sharma',
+      mobileNumber: '9876543210',
+      vehicleModel: 'Pulsar N160 Single ABS',
+      vehicleSku: 'SKU001',
+      dealerName: 'Wasan & Sons',
+      dealerBranch: 'Girnare',
+      financeCompany: 'BAJAJ AUTO CREDIT LIMITED',
+      executiveName: 'EMP-9041',
+      dmaName: 'Atul Patil',
+      dmaCode: 'DMA001',
+      dmaContact: '9876543210',
+      monthlyIncome: 45000,
+      existingEmi: 3000,
+    };
+  });
+
+  const [selectedTenureMonths, setSelectedTenureMonths] = useState<number>(savedCalcState?.selectedTenureMonths ?? 36);
+  const [activeTab, setActiveTab] = useState<'calculator' | 'comparison' | 'amortization' | 'quotations' | 'admin'>(
+    savedCalcState?.activeTab ?? 'calculator'
+  );
+
+  // Persist calculator state automatically whenever fields change
+  useEffect(() => {
+    const stateToSave = {
+      selectedSchemeCode: selectedScheme.schemeCode,
+      showroomOrp,
+      sfdcOrp,
+      loanAmount,
+      customRoi,
+      paRequired,
+      rsaRequired,
+      customerDetails,
+      selectedTenureMonths,
+      activeTab,
+    };
+    localStorage.setItem('finance_calculator_state', JSON.stringify(stateToSave));
+  }, [
+    selectedScheme,
+    showroomOrp,
+    sfdcOrp,
+    loanAmount,
+    customRoi,
+    paRequired,
+    rsaRequired,
+    customerDetails,
+    selectedTenureMonths,
+    activeTab,
+  ]);
 
   // Handle vehicle SKU auto-selection
   const handleSelectVehicleMaster = (vehicle: VehicleMaster) => {

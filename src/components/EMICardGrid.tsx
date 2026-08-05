@@ -129,9 +129,9 @@ export const EMICardGrid: React.FC<EMICardGridProps> = ({
                 </div>
 
                 <div className="p-2.5 rounded-xl bg-slate-50/90 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 shadow-2xs">
-                  <span className="text-[10px] text-slate-500 font-semibold block">Upfront Charges</span>
+                  <span className="text-[10px] text-slate-500 font-semibold block">Total Upfront</span>
                   <span className="font-bold text-slate-700 dark:text-slate-300">
-                    ₹{calc.totalCharges.toLocaleString('en-IN')}
+                    ₹{calc.totalUpfrontCharges.toLocaleString('en-IN')}
                   </span>
                 </div>
 

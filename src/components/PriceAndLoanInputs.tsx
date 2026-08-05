@@ -299,7 +299,7 @@ export const PriceAndLoanInputs: React.FC<PriceAndLoanInputsProps> = ({
                 className="w-4 h-4 rounded-lg text-amber-500 focus:ring-amber-500 cursor-pointer"
               />
               <Wrench className="w-3.5 h-3.5 text-amber-500" />
-              <span>RSA Support (₹{scheme.rsaCharge})</span>
+              <span>RSA Support (Auto Vehicle + Tenure)</span>
             </label>
           </div>
         </div>

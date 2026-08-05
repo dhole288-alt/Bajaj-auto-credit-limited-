@@ -67,6 +67,7 @@ export interface CalculationInput {
   paChargeOverride?: number;
   rsaRequired: boolean;
   rsaChargeOverride?: number;
+  vehicleCategory?: string;
   customerDetails: CustomerDetails;
 }
 
@@ -83,8 +84,9 @@ export interface TenureCalculation {
   upfrontInterest: number;
   advanceEmiAmount: number;
   totalCharges: number; // serviceCharge + stampDuty + additionalUpfront + paCharge + rsaCharge + upfrontInterest
-  downPayment: number; // (Showroom ORP - Loan Amount) + totalCharges + advanceEmiAmount
-  totalPayableAmount: number; // downPayment + EMI * (tenureMonths - advanceEmiCount) = Showroom ORP + totalCharges + totalInterest
+  totalUpfrontCharges: number; // Processing Fee + Stamp Duty + Documentation + PA Insurance + RSA Premium + Advance EMI
+  downPayment: number; // (Showroom ORP - Loan Amount) + totalUpfrontCharges
+  totalPayableAmount: number; // downPayment + EMI * (tenureMonths - advanceEmiCount) = Showroom ORP + totalUpfrontCharges + totalInterest
   ltvPercent: number; // (Loan Amount / SFDC ORP) * 100
   appliedRoi: number; // Annual ROI % applied for this tenure
   rawEmi: number; // Unrounded exact EMI
@@ -93,6 +95,7 @@ export interface TenureCalculation {
   debugFormula?: {
     pmtFormula: string;
     downPaymentFormula: string;
+    totalUpfrontFormula: string;
     totalPayableFormula: string;
     serviceChargeFormula: string;
     stampDutyFormula: string;

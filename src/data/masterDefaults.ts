@@ -1,4 +1,4 @@
-import { Dealer, VehicleMaster, DmaManager, MasterDatabase } from '../types/masterData';
+import { Dealer, VehicleMaster, DmaManager, UpfrontChargeMasterItem, MasterDatabase } from '../types/masterData';
 
 export const DEFAULT_DEALERS: Dealer[] = [
   {
@@ -195,8 +195,76 @@ export const DEFAULT_DMA_MANAGERS: DmaManager[] = [
   },
 ];
 
+export const DEFAULT_UPFRONT_CHARGES: UpfrontChargeMasterItem[] = [
+  {
+    id: 'uf-pf',
+    code: 'PF',
+    name: 'Processing Fee (PF)',
+    chargeType: 'percentage',
+    defaultValue: 2.0,
+    minCap: 1000,
+    maxCap: 5000,
+    isOptional: false,
+    description: 'Processing Fee = Loan Amount × PF%',
+    isActive: true,
+  },
+  {
+    id: 'uf-stamp',
+    code: 'STAMP_DUTY',
+    name: 'Stamp Duty & Legal Charges',
+    chargeType: 'percentage',
+    defaultValue: 0.25,
+    minCap: 250,
+    maxCap: 1500,
+    isOptional: false,
+    description: 'Stamp Duty = Loan Amount × Stamp Duty %',
+    isActive: true,
+  },
+  {
+    id: 'uf-doc',
+    code: 'DOCUMENTATION',
+    name: 'Documentation Charges',
+    chargeType: 'fixed',
+    defaultValue: 400,
+    isOptional: false,
+    description: 'Documentation = Fixed Amount',
+    isActive: true,
+  },
+  {
+    id: 'uf-pa',
+    code: 'PA',
+    name: 'PA Insurance (Personal Accident)',
+    chargeType: 'fixed',
+    defaultValue: 350,
+    isOptional: true,
+    description: 'PA Insurance = Fixed Amount (Optional cover)',
+    isActive: true,
+  },
+  {
+    id: 'uf-rsa',
+    code: 'RSA',
+    name: 'Road Side Assistance (RSA)',
+    chargeType: 'fixed',
+    defaultValue: 500,
+    isOptional: true,
+    description: 'RSA = Fixed Amount (Optional 24x7 helpline cover)',
+    isActive: true,
+  },
+  {
+    id: 'uf-adv-emi',
+    code: 'ADVANCE_EMI',
+    name: 'Advance EMI Count',
+    chargeType: 'fixed',
+    defaultValue: 0,
+    isOptional: true,
+    description: 'Number of advance EMIs collected upfront at loan disbursement',
+    isActive: true,
+  },
+];
+
 export const DEFAULT_MASTER_DATABASE: MasterDatabase = {
   dealers: DEFAULT_DEALERS,
   vehicles: DEFAULT_VEHICLES,
   dmaManagers: DEFAULT_DMA_MANAGERS,
+  upfrontCharges: DEFAULT_UPFRONT_CHARGES,
 };

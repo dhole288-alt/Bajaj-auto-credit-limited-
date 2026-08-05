@@ -32,8 +32,22 @@ export interface DmaManager {
   isActive: boolean;
 }
 
+export interface UpfrontChargeMasterItem {
+  id: string;
+  code: string;
+  name: string;
+  chargeType: 'percentage' | 'fixed';
+  defaultValue: number;
+  minCap?: number;
+  maxCap?: number;
+  isOptional: boolean;
+  description: string;
+  isActive: boolean;
+}
+
 export interface MasterDatabase {
   dealers: Dealer[];
   vehicles: VehicleMaster[];
   dmaManagers: DmaManager[];
+  upfrontCharges: UpfrontChargeMasterItem[];
 }

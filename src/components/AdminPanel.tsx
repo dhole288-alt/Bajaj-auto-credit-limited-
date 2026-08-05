@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Scheme } from '../types/finance';
-import { MasterDatabase, Dealer, VehicleMaster, DmaManager, Branch } from '../types/masterData';
+import { MasterDatabase, Dealer, VehicleMaster, DmaManager, Branch, UpfrontChargeMasterItem } from '../types/masterData';
 import { parseSchemeExcelFile, exportSchemesToExcel } from '../utils/excelParser';
 import { parseVehicleExcel, exportVehiclesToExcel, exportDmaToExcel, exportFullDatabaseBackup } from '../utils/masterExcelParser';
 import {
@@ -30,6 +30,9 @@ import {
   Tag,
   Layers,
   Sparkles,
+  Coins,
+  Calculator,
+  Receipt,
 } from 'lucide-react';
 import { BajajLogo } from './BajajLogo';
 
@@ -51,12 +54,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onResetDefaultSchemes,
   onResetDefaultMasterDb,
 }) => {
-  const [adminSubTab, setAdminSubTab] = useState<'schemes' | 'dealers' | 'vehicles' | 'dma' | 'backup'>('vehicles');
+  const [adminSubTab, setAdminSubTab] = useState<'schemes' | 'dealers' | 'vehicles' | 'dma' | 'upfront' | 'backup'>('vehicles');
 
   // Search queries
   const [branchSearch, setBranchSearch] = useState('');
   const [vehicleSearch, setVehicleSearch] = useState('');
   const [dmaSearch, setDmaSearch] = useState('');
+  const [upfrontSearch, setUpfrontSearch] = useState('');
 
   // Modals state
   const [editingScheme, setEditingScheme] = useState<Scheme | null>(null);
@@ -70,6 +74,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const [editingDealer, setEditingDealer] = useState<Dealer | null>(null);
   const [isDealerModalOpen, setIsDealerModalOpen] = useState(false);
+
+  const [editingUpfront, setEditingUpfront] = useState<UpfrontChargeMasterItem | null>(null);
+  const [isUpfrontModalOpen, setIsUpfrontModalOpen] = useState(false);
 
   const [newBranchName, setNewBranchName] = useState('');
 
@@ -415,6 +422,57 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setIsDmaModalOpen(true);
   };
 
+  // Upfront Charges Master actions
+  const handleSaveUpfrontModal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUpfront) return;
+
+    setMasterDb((prev) => {
+      const currentUpfronts = prev.upfrontCharges || [];
+      const idx = currentUpfronts.findIndex((u) => u.id === editingUpfront.id);
+      if (idx >= 0) {
+        const updated = [...currentUpfronts];
+        updated[idx] = editingUpfront;
+        return { ...prev, upfrontCharges: updated };
+      }
+      return { ...prev, upfrontCharges: [editingUpfront, ...currentUpfronts] };
+    });
+
+    setIsUpfrontModalOpen(false);
+    setEditingUpfront(null);
+  };
+
+  const handleToggleUpfrontActive = (id: string) => {
+    setMasterDb((prev) => ({
+      ...prev,
+      upfrontCharges: (prev.upfrontCharges || []).map((u) => (u.id === id ? { ...u, isActive: !u.isActive } : u)),
+    }));
+  };
+
+  const handleDeleteUpfrontCharge = (id: string) => {
+    if (confirm('Delete this Upfront Charge component from Master Database?')) {
+      setMasterDb((prev) => ({
+        ...prev,
+        upfrontCharges: (prev.upfrontCharges || []).filter((u) => u.id !== id),
+      }));
+    }
+  };
+
+  const createNewUpfrontCharge = () => {
+    const newUpfront: UpfrontChargeMasterItem = {
+      id: `uf-${Date.now()}`,
+      code: `CHARGE_${(masterDb.upfrontCharges || []).length + 1}`,
+      name: 'Custom Upfront Fee Component',
+      chargeType: 'fixed',
+      defaultValue: 500,
+      isOptional: true,
+      description: 'Custom upfront charge added by Admin',
+      isActive: true,
+    };
+    setEditingUpfront(newUpfront);
+    setIsUpfrontModalOpen(true);
+  };
+
   // Filtered lists
   const filteredVehicles = masterDb.vehicles.filter(
     (v) =>
@@ -429,6 +487,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       d.name.toLowerCase().includes(dmaSearch.toLowerCase()) ||
       d.code.toLowerCase().includes(dmaSearch.toLowerCase()) ||
       d.contactNumber.includes(dmaSearch)
+  );
+
+  const filteredUpfronts = (masterDb.upfrontCharges || []).filter(
+    (u) =>
+      u.name.toLowerCase().includes(upfrontSearch.toLowerCase()) ||
+      u.code.toLowerCase().includes(upfrontSearch.toLowerCase()) ||
+      u.description.toLowerCase().includes(upfrontSearch.toLowerCase())
   );
 
   return (
@@ -512,6 +577,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         >
           <BadgeCheck className="w-4 h-4" />
           <span>DMA Managers ({masterDb.dmaManagers.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setAdminSubTab('upfront')}
+          className={`px-4 py-2.5 rounded-2xl font-black text-xs transition-all flex items-center space-x-2 whitespace-nowrap ${
+            adminSubTab === 'upfront'
+              ? 'bg-[#024b9c] text-white shadow-md glow-blue'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+          }`}
+        >
+          <Coins className="w-4 h-4" />
+          <span>Upfront Charges Master ({(masterDb.upfrontCharges || []).length})</span>
         </button>
 
         <button
@@ -870,6 +948,175 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* SUB-TAB: UPFRONT CHARGES MASTER */}
+      {/* ======================================================== */}
+      {adminSubTab === 'upfront' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Formula Reference Card */}
+          <div className="p-5 rounded-3xl bg-gradient-to-r from-blue-900 via-[#024b9c] to-blue-900 text-white shadow-lg space-y-3">
+            <div className="flex items-center space-x-2 text-amber-400 font-black text-xs uppercase tracking-widest">
+              <Calculator className="w-4 h-4" />
+              <span>Standard Upfront Charges Master Formula</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+              <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15">
+                <span className="text-amber-300 font-extrabold block mb-0.5">Processing Fee (PF)</span>
+                <code className="text-white font-mono font-bold">Processing Fee = Loan Amount × PF%</code>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15">
+                <span className="text-amber-300 font-extrabold block mb-0.5">Stamp Duty & Legal</span>
+                <code className="text-white font-mono font-bold">Stamp Duty = Loan Amount × Stamp Duty %</code>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15">
+                <span className="text-amber-300 font-extrabold block mb-0.5">Documentation Charges</span>
+                <code className="text-white font-mono font-bold">Documentation = Fixed Amount</code>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15">
+                <span className="text-amber-300 font-extrabold block mb-0.5">PA Insurance</span>
+                <code className="text-white font-mono font-bold">PA Insurance = Fixed Amount</code>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15">
+                <span className="text-amber-300 font-extrabold block mb-0.5">Road Side Assistance (RSA)</span>
+                <code className="text-white font-mono font-bold">RSA = Fixed Amount</code>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-amber-400/20 backdrop-blur-md border border-amber-400/40 col-span-1 md:col-span-2 lg:col-span-1">
+                <span className="text-amber-300 font-black block mb-0.5">Total Upfront Charges Sum</span>
+                <code className="text-amber-200 font-mono font-extrabold text-[11px]">
+                  PF + Stamp Duty + Doc + PA + RSA + Advance EMI
+                </code>
+              </div>
+            </div>
+          </div>
+
+          {/* Controls Bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-blue-50/70 dark:bg-slate-800/60 p-4 rounded-2xl border border-blue-100 dark:border-slate-800">
+            <div className="relative w-full sm:w-72">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 py-0 my-auto top-0 bottom-0" />
+              <input
+                type="text"
+                placeholder="Search charge name or code..."
+                value={upfrontSearch}
+                onChange={(e) => setUpfrontSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={createNewUpfrontCharge}
+              className="px-4 py-2 rounded-xl bg-[#024b9c] text-white font-extrabold text-xs shadow-md flex items-center space-x-1.5 w-full sm:w-auto justify-center"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Upfront Charge Component</span>
+            </button>
+          </div>
+
+          {/* Upfront Charges Master Table */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#024b9c] text-white font-extrabold">
+                  <tr>
+                    <th className="p-3">Charge Code</th>
+                    <th className="p-3">Component Name</th>
+                    <th className="p-3">Type</th>
+                    <th className="p-3">Default Rate / Amount</th>
+                    <th className="p-3">Calculation Formula</th>
+                    <th className="p-3 text-center">Optional</th>
+                    <th className="p-3 text-center">Status</th>
+                    <th className="p-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                  {filteredUpfronts.map((u) => (
+                    <tr key={u.id} className="hover:bg-blue-50/40 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="p-3 font-mono font-black text-[#024b9c] dark:text-blue-400">{u.code}</td>
+                      <td className="p-3 font-extrabold text-slate-900 dark:text-white">
+                        <div>{u.name}</div>
+                        <div className="text-[10px] text-slate-400 font-normal">{u.description}</div>
+                      </td>
+                      <td className="p-3">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            u.chargeType === 'percentage'
+                              ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                              : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                          }`}
+                        >
+                          {u.chargeType === 'percentage' ? 'Percentage (%)' : 'Fixed Rupee (₹)'}
+                        </span>
+                      </td>
+                      <td className="p-3 font-black text-slate-900 dark:text-white">
+                        {u.chargeType === 'percentage' ? `${u.defaultValue}%` : `₹${u.defaultValue.toLocaleString('en-IN')}`}
+                      </td>
+                      <td className="p-3 text-slate-600 dark:text-slate-300 font-medium italic">
+                        {u.chargeType === 'percentage' ? `Loan Amount × ${u.defaultValue}%` : `Fixed ₹${u.defaultValue}`}
+                      </td>
+                      <td className="p-3 text-center">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            u.isOptional ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {u.isOptional ? 'Optional' : 'Mandatory'}
+                        </span>
+                      </td>
+                      <td className="p-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleUpfrontActive(u.id)}
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
+                            u.isActive ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-200 text-slate-600'
+                          }`}
+                        >
+                          {u.isActive ? 'Active' : 'Disabled'}
+                        </button>
+                      </td>
+                      <td className="p-3 text-right">
+                        <div className="flex items-center justify-end space-x-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingUpfront(u);
+                              setIsUpfrontModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-950 text-[#024b9c]"
+                            title="Edit Upfront Component"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUpfrontCharge(u.id)}
+                            className="p-1.5 rounded-lg bg-red-50 dark:bg-red-950 text-red-600"
+                            title="Delete Component"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredUpfronts.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="p-8 text-center text-slate-400 font-bold">
+                        No upfront charge items found matching "{upfrontSearch}"
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -1347,6 +1594,115 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Upfront Charge Edit Modal */}
+      {isUpfrontModalOpen && editingUpfront && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
+              <h3 className="text-base font-extrabold text-[#024b9c] dark:text-blue-400 flex items-center space-x-2">
+                <Coins className="w-5 h-5 text-amber-500" />
+                <span>Manage Upfront Charge Master Component</span>
+              </h3>
+              <button type="button" onClick={() => setIsUpfrontModalOpen(false)} className="p-1 rounded-lg text-slate-400 hover:bg-slate-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveUpfrontModal} className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold block mb-1">Charge Code</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingUpfront.code}
+                    onChange={(e) => setEditingUpfront({ ...editingUpfront, code: e.target.value.toUpperCase() })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-mono font-extrabold"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold block mb-1">Calculation Type</label>
+                  <select
+                    value={editingUpfront.chargeType}
+                    onChange={(e) =>
+                      setEditingUpfront({ ...editingUpfront, chargeType: e.target.value as 'percentage' | 'fixed' })
+                    }
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                  >
+                    <option value="percentage">Percentage (%) of Loan Amount</option>
+                    <option value="fixed">Fixed Rupee Amount (₹)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold block mb-1">Component Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editingUpfront.name}
+                  onChange={(e) => setEditingUpfront({ ...editingUpfront, name: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-extrabold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold block mb-1">
+                    {editingUpfront.chargeType === 'percentage' ? 'Default Percentage (%)' : 'Default Fixed Rupee Amount (₹)'}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={editingUpfront.defaultValue}
+                    onChange={(e) => setEditingUpfront({ ...editingUpfront, defaultValue: Number(e.target.value) })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-black text-blue-900 dark:text-blue-300"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold block mb-1">Charge Inclusion</label>
+                  <select
+                    value={editingUpfront.isOptional ? 'optional' : 'mandatory'}
+                    onChange={(e) => setEditingUpfront({ ...editingUpfront, isOptional: e.target.value === 'optional' })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                  >
+                    <option value="mandatory">Mandatory (Required for all loans)</option>
+                    <option value="optional">Optional (Customer can toggle on/off)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold block mb-1">Formula & Description</label>
+                <input
+                  type="text"
+                  value={editingUpfront.description}
+                  onChange={(e) => setEditingUpfront({ ...editingUpfront, description: e.target.value })}
+                  placeholder="e.g. Processing Fee = Loan Amount × PF%"
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4 border-t dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsUpfrontModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="px-5 py-2 bg-[#024b9c] text-white rounded-xl font-extrabold shadow-md">
+                  Save Upfront Charge
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

@@ -34,7 +34,7 @@ export const CalculationBreakdownPanel: React.FC<CalculationBreakdownPanelProps>
   const pieData = [
     { name: 'Loan Principal', value: input.loanAmount, color: '#024b9c' }, // Royal Blue
     { name: 'Total Interest', value: selectedCalc.totalInterest, color: '#f59e0b' }, // Amber Gold
-    { name: 'Upfront Charges', value: selectedCalc.totalCharges, color: '#8b5cf6' }, // Purple
+    { name: 'Total Upfront Charges', value: selectedCalc.totalUpfrontCharges, color: '#8b5cf6' }, // Purple
   ];
 
   return (
@@ -155,11 +155,11 @@ export const CalculationBreakdownPanel: React.FC<CalculationBreakdownPanelProps>
           </div>
 
           <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-2xs">
-            <span className="text-[10px] uppercase font-black text-blue-600 dark:text-blue-400">Upfront Charges</span>
+            <span className="text-[10px] uppercase font-black text-blue-600 dark:text-blue-400">Total Upfront Charges</span>
             <p className="text-xl font-black text-slate-900 dark:text-white mt-1">
-              <AnimatedNumber value={selectedCalc.totalCharges} />
+              <AnimatedNumber value={selectedCalc.totalUpfrontCharges} />
             </p>
-            <span className="text-[10px] text-slate-500 font-medium">Doc + PA + RSA</span>
+            <span className="text-[10px] text-slate-500 font-medium">PF + Stamp + Doc + PA + RSA + Adv EMI</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-2xs sm:col-span-2">
@@ -217,21 +217,25 @@ export const CalculationBreakdownPanel: React.FC<CalculationBreakdownPanelProps>
                 <tr>
                   <td className="p-3 font-semibold">PA Insurance Cover</td>
                   <td className="p-3 text-right font-black">₹{selectedCalc.paCharge.toLocaleString('en-IN')}</td>
-                  <td className="p-3 text-[11px] text-slate-500">{input.paRequired ? 'Included' : 'Opted Out'}</td>
+                  <td className="p-3 text-[11px] text-slate-500">{input.paRequired ? 'Fixed Coverage Fee' : 'Opted Out'}</td>
                 </tr>
 
                 <tr>
-                  <td className="p-3 font-semibold">Roadside Assistance (RSA)</td>
+                  <td className="p-3 font-semibold">Roadside Assistance (RSA Premium)</td>
                   <td className="p-3 text-right font-black">₹{selectedCalc.rsaCharge.toLocaleString('en-IN')}</td>
-                  <td className="p-3 text-[11px] text-slate-500">{input.rsaRequired ? 'Included' : 'Opted Out'}</td>
+                  <td className="p-3 text-[11px] text-slate-500">
+                    {input.rsaRequired
+                      ? `Vehicle Type + ${selectedTenureMonths}M Tenure`
+                      : 'Opted Out'}
+                  </td>
                 </tr>
 
                 <tr className="bg-blue-50/80 dark:bg-slate-800/80 font-black">
                   <td className="p-3 text-[#024b9c] dark:text-blue-300 uppercase">TOTAL UPFRONT CHARGES</td>
                   <td className="p-3 text-right text-[#024b9c] dark:text-blue-400 text-sm font-black">
-                    ₹{selectedCalc.totalCharges.toLocaleString('en-IN')}
+                    ₹{selectedCalc.totalUpfrontCharges.toLocaleString('en-IN')}
                   </td>
-                  <td className="p-3 text-[11px] text-slate-500">Added to Down Payment</td>
+                  <td className="p-3 text-[11px] text-slate-500">PF + Stamp + Doc + PA + RSA + Adv EMI</td>
                 </tr>
               </tbody>
             </table>

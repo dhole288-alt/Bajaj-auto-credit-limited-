@@ -90,6 +90,96 @@ export function calculateStampDuty(scheme: Scheme, loanAmount: number): number {
 }
 
 /**
+ * Calculate Road Side Assistance (RSA) Premium based on Vehicle Type/Category & Selected Tenure
+ *
+ * Rates Matrix (Standard Bajaj Auto Credit / Two-Wheeler RSA Slabs):
+ * - Commuter / Scooter / Entry-level (<125cc):
+ *     12 Months (1 Yr): ₹350
+ *     18-24 Months (2 Yrs): ₹650
+ *     30-36 Months (3 Yrs): ₹900
+ *     42+ Months (4 Yrs): ₹1,150
+ * - Sports / Executive (150cc - 250cc, Pulsar, Avenger, Dominar 250):
+ *     12 Months (1 Yr): ₹450
+ *     18-24 Months (2 Yrs): ₹800
+ *     30-36 Months (3 Yrs): ₹1,100
+ *     42+ Months (4 Yrs): ₹1,400
+ * - Premium / Superbike (300cc+, KTM, Husqvarna, Dominar 400):
+ *     12 Months (1 Yr): ₹600
+ *     18-24 Months (2 Yrs): ₹1,100
+ *     30-36 Months (3 Yrs): ₹1,500
+ *     42+ Months (4 Yrs): ₹1,900
+ * - Electric / EV (Chetak EV):
+ *     12 Months (1 Yr): ₹500
+ *     18-24 Months (2 Yrs): ₹900
+ *     30-36 Months (3 Yrs): ₹1,250
+ *     42+ Months (4 Yrs): ₹1,600
+ * - Commercial / 3-Wheeler (RE, Maxima):
+ *     12 Months (1 Yr): ₹700
+ *     18-24 Months (2 Yrs): ₹1,300
+ *     30-36 Months (3 Yrs): ₹1,800
+ *     42+ Months (4 Yrs): ₹2,300
+ */
+export function calculateRsaPremium(
+  vehicleType?: string,
+  tenureMonths: number = 36,
+  rsaOverride?: number
+): number {
+  if (rsaOverride !== undefined && isFinite(rsaOverride) && rsaOverride > 0) {
+    return rsaOverride;
+  }
+
+  const vType = (vehicleType || '').toLowerCase();
+
+  let category: 'commuter' | 'sports' | 'premium' | 'ev' | 'commercial' = 'sports';
+  if (vType.includes('electric') || vType.includes('ev') || vType.includes('chetak')) {
+    category = 'ev';
+  } else if (vType.includes('superbike') || vType.includes('ktm') || vType.includes('400') || vType.includes('premium')) {
+    category = 'premium';
+  } else if (vType.includes('commercial') || vType.includes('3w') || vType.includes('3-wheeler') || vType.includes('re') || vType.includes('maxima')) {
+    category = 'commercial';
+  } else if (vType.includes('scooter') || vType.includes('100') || vType.includes('110') || vType.includes('125') || vType.includes('platina') || vType.includes('ct100')) {
+    category = 'commuter';
+  } else {
+    category = 'sports'; // Default (Pulsar / Executive 150-250cc)
+  }
+
+  if (tenureMonths <= 12) {
+    switch (category) {
+      case 'commuter': return 350;
+      case 'sports': return 450;
+      case 'ev': return 500;
+      case 'premium': return 600;
+      case 'commercial': return 700;
+    }
+  } else if (tenureMonths <= 24) {
+    switch (category) {
+      case 'commuter': return 650;
+      case 'sports': return 800;
+      case 'ev': return 900;
+      case 'premium': return 1100;
+      case 'commercial': return 1300;
+    }
+  } else if (tenureMonths <= 36) {
+    switch (category) {
+      case 'commuter': return 900;
+      case 'sports': return 1100;
+      case 'ev': return 1250;
+      case 'premium': return 1500;
+      case 'commercial': return 1800;
+    }
+  } else {
+    // 42+ Months
+    switch (category) {
+      case 'commuter': return 1150;
+      case 'sports': return 1400;
+      case 'ev': return 1600;
+      case 'premium': return 1900;
+      case 'commercial': return 2300;
+    }
+  }
+}
+
+/**
  * Calculate complete Tenure Details for a given tenure in months
  */
 export function calculateTenureDetails(
@@ -122,27 +212,37 @@ export function calculateTenureDetails(
   }
 
   // Charges Breakdown
+  // 1. Processing Fee (PF) = Loan Amount * PF% (or flat)
   const serviceCharge = calculateServiceCharge(scheme, loanAmount);
+  // 2. Stamp Duty = Loan Amount * Stamp Duty% (or flat)
   const stampDuty = calculateStampDuty(scheme, loanAmount);
+  // 3. Documentation Charge = Fixed Amount
   const additionalUpfront = Math.max(0, Math.round(scheme.additionalUpfrontCharges || 0));
+  // 4. PA Insurance = Fixed Amount
+  const paCharge = input.paRequired ? Math.max(0, Math.round(input.paChargeOverride ?? scheme.paCharge ?? 350)) : 0;
   
-  const paCharge = input.paRequired ? Math.max(0, Math.round(input.paChargeOverride ?? scheme.paCharge ?? 0)) : 0;
-  const rsaCharge = input.rsaRequired ? Math.max(0, Math.round(input.rsaChargeOverride ?? scheme.rsaCharge ?? 0)) : 0;
+  // 5. RSA Premium = Vehicle Type + Selected Tenure
+  const vehicleType = input.vehicleCategory || input.customerDetails?.vehicleModel || 'Pulsar';
+  const calculatedRsa = calculateRsaPremium(vehicleType, tenure, input.rsaChargeOverride ?? scheme.rsaCharge);
+  const rsaCharge = input.rsaRequired ? calculatedRsa : 0;
   
   const upfrontInterest = Math.max(0, Math.round((loanAmount * (scheme.upfrontInterestPercent || 0)) / 100));
   
+  // 6. Advance EMI = EMI * Advance EMI Count
   const advanceEmiCount = Math.max(0, Math.round(scheme.advanceEmiCount || 0));
   const advanceEmiAmount = Math.round(emi * advanceEmiCount);
 
+  // Total Upfront Charges Formula:
+  // Processing Fee + Stamp Duty + Documentation Charge + PA Insurance + RSA Premium + Advance EMI
+  const totalUpfrontCharges = serviceCharge + stampDuty + additionalUpfront + paCharge + rsaCharge + advanceEmiAmount;
   const totalCharges = serviceCharge + stampDuty + additionalUpfront + paCharge + rsaCharge + upfrontInterest;
 
   // Down Payment formula:
-  // Down Payment = (Showroom On-Road Price - Loan Amount) + Upfront Total Charges + Advance EMIs
+  // Down Payment = (Showroom On-Road Price - Loan Amount) + Total Upfront Charges
   const priceMargin = Math.max(0, showroomOrp - loanAmount);
-  const downPayment = Math.max(0, Math.round(priceMargin + totalCharges + advanceEmiAmount));
+  const downPayment = Math.max(0, Math.round(priceMargin + totalUpfrontCharges));
 
   // Total Payable Amount = Down Payment + Remaining EMIs (tenure - advanceEmiCount)
-  // Mathematically identical to: Showroom ORP + Total Upfront Charges + Total Interest
   const remainingTenure = Math.max(0, tenure - advanceEmiCount);
   const totalPayableAmount = Math.max(0, Math.round(downPayment + (emi * remainingTenure)));
 
@@ -162,17 +262,19 @@ export function calculateTenureDetails(
     advanceEmiCount,
     advanceEmiAmount,
     totalCharges,
+    totalUpfrontCharges,
     priceMargin,
     downPayment,
     totalPayableAmount,
     ltvPercent: Math.round(ltvPercent * 100) / 100,
     debugFormula: {
       pmtFormula: `PMT(${roi}% p.a. / 12, ${tenure} months, ₹${loanAmount.toLocaleString('en-IN')}) = ₹${rawEmi.toFixed(2)} → Rounded: ₹${emi.toLocaleString('en-IN')}`,
-      downPaymentFormula: `Margin (₹${priceMargin.toLocaleString('en-IN')}) + Upfront Fees (₹${totalCharges.toLocaleString('en-IN')}) + Advance EMI (${advanceEmiCount}x ₹${emi.toLocaleString('en-IN')} = ₹${advanceEmiAmount.toLocaleString('en-IN')}) = ₹${downPayment.toLocaleString('en-IN')}`,
+      downPaymentFormula: `Margin (₹${priceMargin.toLocaleString('en-IN')}) + Total Upfront Charges (₹${totalUpfrontCharges.toLocaleString('en-IN')}) = ₹${downPayment.toLocaleString('en-IN')}`,
+      totalUpfrontFormula: `PF (₹${serviceCharge}) + Stamp Duty (₹${stampDuty}) + Documentation (₹${additionalUpfront}) + PA (₹${paCharge}) + RSA (₹${rsaCharge} [Vehicle: ${vehicleType}, Tenure: ${tenure}M]) + Advance EMI (${advanceEmiCount}x ₹${emi} = ₹${advanceEmiAmount}) = ₹${totalUpfrontCharges.toLocaleString('en-IN')}`,
       totalPayableFormula: `Down Payment (₹${downPayment.toLocaleString('en-IN')}) + ${remainingTenure} Remaining EMIs x ₹${emi.toLocaleString('en-IN')} = ₹${totalPayableAmount.toLocaleString('en-IN')}`,
       serviceChargeFormula: scheme.serviceChargeType === 'percentage' 
-        ? `${scheme.serviceChargeValue}% of ₹${loanAmount.toLocaleString('en-IN')} = ₹${((loanAmount * scheme.serviceChargeValue) / 100).toFixed(2)} (Min Cap: ₹${scheme.minServiceCharge || 0}) → ₹${serviceCharge.toLocaleString('en-IN')}`
-        : `Flat Fee: ₹${serviceCharge.toLocaleString('en-IN')}`,
+        ? `${scheme.serviceChargeValue}% of ₹${loanAmount.toLocaleString('en-IN')} = ₹${((loanAmount * scheme.serviceChargeValue) / 100).toFixed(2)} (Cap: ₹${serviceCharge})`
+        : `Flat PF: ₹${serviceCharge.toLocaleString('en-IN')}`,
       stampDutyFormula: scheme.stampDutyType === 'percentage'
         ? `${scheme.stampDutyValue}% of ₹${loanAmount.toLocaleString('en-IN')} = ₹${stampDuty.toLocaleString('en-IN')}`
         : `Flat Duty: ₹${stampDuty.toLocaleString('en-IN')}`,
