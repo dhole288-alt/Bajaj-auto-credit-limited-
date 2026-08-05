@@ -127,7 +127,7 @@ export const QuotationPrintView: React.FC<QuotationPrintViewProps> = ({ record }
           </div>
         </div>
 
-        {/* 4. Selected Loan & EMI Summary (Only requested fields) */}
+        {/* 4. Selected Loan & EMI Summary */}
         <div className="border-2 border-[#005cb9] rounded-xl p-4 bg-blue-50/50 mb-5">
           <h3 className="text-sm font-black text-[#005cb9] uppercase border-b border-blue-200 pb-1.5 mb-3 font-serif flex items-center justify-between">
             <span>Sanctioned Finance Summary ({selectedTenure} Months Tenure)</span>
@@ -136,7 +136,7 @@ export const QuotationPrintView: React.FC<QuotationPrintViewProps> = ({ record }
             </span>
           </h3>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center mb-4">
             <div className="p-3 bg-white border border-blue-200 rounded-lg shadow-2xs">
               <span className="text-[10px] font-bold text-slate-500 uppercase block">Vehicle On-Road Price</span>
               <span className="text-base font-black text-slate-900 font-serif">
@@ -163,6 +163,49 @@ export const QuotationPrintView: React.FC<QuotationPrintViewProps> = ({ record }
               <span className="text-lg font-black text-white font-serif">
                 ₹{currentCalc.emi.toLocaleString('en-IN')} / mo
               </span>
+            </div>
+          </div>
+
+          {/* Itemized Upfront Charges Breakdown Table */}
+          <div className="border-t border-blue-200 pt-3">
+            <h4 className="text-xs font-black text-[#005cb9] uppercase font-serif mb-2">
+              Itemized Upfront Charges Component Breakdown
+            </h4>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+              <div className="flex justify-between border-b border-blue-100 pb-0.5">
+                <span className="font-bold text-slate-600">Processing Fee (PF):</span>
+                <span className="font-black text-slate-900">₹{currentCalc.serviceCharge.toLocaleString('en-IN')}</span>
+              </div>
+
+              <div className="flex justify-between border-b border-blue-100 pb-0.5">
+                <span className="font-bold text-slate-600">Stamp Duty & Legal:</span>
+                <span className="font-black text-slate-900">₹{currentCalc.stampDuty.toLocaleString('en-IN')}</span>
+              </div>
+
+              <div className="flex justify-between border-b border-blue-100 pb-0.5">
+                <span className="font-bold text-slate-600">Documentation Charges:</span>
+                <span className="font-black text-slate-900">₹{currentCalc.additionalUpfront.toLocaleString('en-IN')}</span>
+              </div>
+
+              <div className="flex justify-between border-b border-blue-100 pb-0.5">
+                <span className="font-bold text-slate-600">PA Insurance Cover:</span>
+                <span className="font-black text-slate-900">₹{currentCalc.paCharge.toLocaleString('en-IN')}</span>
+              </div>
+
+              <div className="flex justify-between border-b border-blue-100 pb-0.5">
+                <span className="font-bold text-slate-600">RSA Premium ({selectedTenure}M):</span>
+                <span className="font-black text-slate-900">₹{currentCalc.rsaCharge.toLocaleString('en-IN')}</span>
+              </div>
+
+              <div className="flex justify-between border-b border-blue-100 pb-0.5">
+                <span className="font-bold text-slate-600">Advance EMI ({currentCalc.advanceEmiCount}x):</span>
+                <span className="font-black text-slate-900">₹{currentCalc.advanceEmiAmount.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+
+            <div className="mt-2 bg-blue-100/80 p-2 rounded-lg flex justify-between items-center text-xs font-black text-[#005cb9]">
+              <span>TOTAL UPFRONT CHARGES</span>
+              <span className="text-sm">₹{currentCalc.totalUpfrontCharges.toLocaleString('en-IN')}</span>
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { Dealer, VehicleMaster, DmaManager, UpfrontChargeMasterItem, MasterDatabase } from '../types/masterData';
+import { Dealer, VehicleMaster, DmaManager, UpfrontChargeMasterItem, RsaPremiumMasterItem, MasterDatabase } from '../types/masterData';
 
 export const DEFAULT_DEALERS: Dealer[] = [
   {
@@ -262,9 +262,42 @@ export const DEFAULT_UPFRONT_CHARGES: UpfrontChargeMasterItem[] = [
   },
 ];
 
+export const DEFAULT_RSA_MASTER: RsaPremiumMasterItem[] = [
+  // Commuter / Scooter
+  { id: 'rsa-c-12', categoryCode: 'commuter', categoryName: 'Commuter / Scooter (<125cc)', tenureMinMonths: 1, tenureMaxMonths: 12, tenureLabel: 'Up to 12 Months (1 Yr)', premiumAmount: 350, isActive: true },
+  { id: 'rsa-c-24', categoryCode: 'commuter', categoryName: 'Commuter / Scooter (<125cc)', tenureMinMonths: 13, tenureMaxMonths: 24, tenureLabel: '13 to 24 Months (2 Yrs)', premiumAmount: 650, isActive: true },
+  { id: 'rsa-c-36', categoryCode: 'commuter', categoryName: 'Commuter / Scooter (<125cc)', tenureMinMonths: 25, tenureMaxMonths: 36, tenureLabel: '25 to 36 Months (3 Yrs)', premiumAmount: 900, isActive: true },
+  { id: 'rsa-c-60', categoryCode: 'commuter', categoryName: 'Commuter / Scooter (<125cc)', tenureMinMonths: 37, tenureMaxMonths: 60, tenureLabel: '37 to 60 Months (4-5 Yrs)', premiumAmount: 1150, isActive: true },
+
+  // Sports / Executive
+  { id: 'rsa-s-12', categoryCode: 'sports', categoryName: 'Sports / Executive (150-250cc)', tenureMinMonths: 1, tenureMaxMonths: 12, tenureLabel: 'Up to 12 Months (1 Yr)', premiumAmount: 450, isActive: true },
+  { id: 'rsa-s-24', categoryCode: 'sports', categoryName: 'Sports / Executive (150-250cc)', tenureMinMonths: 13, tenureMaxMonths: 24, tenureLabel: '13 to 24 Months (2 Yrs)', premiumAmount: 800, isActive: true },
+  { id: 'rsa-s-36', categoryCode: 'sports', categoryName: 'Sports / Executive (150-250cc)', tenureMinMonths: 25, tenureMaxMonths: 36, tenureLabel: '25 to 36 Months (3 Yrs)', premiumAmount: 1100, isActive: true },
+  { id: 'rsa-s-60', categoryCode: 'sports', categoryName: 'Sports / Executive (150-250cc)', tenureMinMonths: 37, tenureMaxMonths: 60, tenureLabel: '37 to 60 Months (4-5 Yrs)', premiumAmount: 1400, isActive: true },
+
+  // Premium / Superbike
+  { id: 'rsa-p-12', categoryCode: 'premium', categoryName: 'Premium / Superbike (300cc+)', tenureMinMonths: 1, tenureMaxMonths: 12, tenureLabel: 'Up to 12 Months (1 Yr)', premiumAmount: 600, isActive: true },
+  { id: 'rsa-p-24', categoryCode: 'premium', categoryName: 'Premium / Superbike (300cc+)', tenureMinMonths: 13, tenureMaxMonths: 24, tenureLabel: '13 to 24 Months (2 Yrs)', premiumAmount: 1100, isActive: true },
+  { id: 'rsa-p-36', categoryCode: 'premium', categoryName: 'Premium / Superbike (300cc+)', tenureMinMonths: 25, tenureMaxMonths: 36, tenureLabel: '25 to 36 Months (3 Yrs)', premiumAmount: 1500, isActive: true },
+  { id: 'rsa-p-60', categoryCode: 'premium', categoryName: 'Premium / Superbike (300cc+)', tenureMinMonths: 37, tenureMaxMonths: 60, tenureLabel: '37 to 60 Months (4-5 Yrs)', premiumAmount: 1900, isActive: true },
+
+  // EV / Electric
+  { id: 'rsa-e-12', categoryCode: 'ev', categoryName: 'Electric Vehicle (EV / Chetak)', tenureMinMonths: 1, tenureMaxMonths: 12, tenureLabel: 'Up to 12 Months (1 Yr)', premiumAmount: 500, isActive: true },
+  { id: 'rsa-e-24', categoryCode: 'ev', categoryName: 'Electric Vehicle (EV / Chetak)', tenureMinMonths: 13, tenureMaxMonths: 24, tenureLabel: '13 to 24 Months (2 Yrs)', premiumAmount: 900, isActive: true },
+  { id: 'rsa-e-36', categoryCode: 'ev', categoryName: 'Electric Vehicle (EV / Chetak)', tenureMinMonths: 25, tenureMaxMonths: 36, tenureLabel: '25 to 36 Months (3 Yrs)', premiumAmount: 1250, isActive: true },
+  { id: 'rsa-e-60', categoryCode: 'ev', categoryName: 'Electric Vehicle (EV / Chetak)', tenureMinMonths: 37, tenureMaxMonths: 60, tenureLabel: '37 to 60 Months (4-5 Yrs)', premiumAmount: 1600, isActive: true },
+
+  // Commercial / 3W
+  { id: 'rsa-m-12', categoryCode: 'commercial', categoryName: 'Commercial / 3-Wheeler (RE/Maxima)', tenureMinMonths: 1, tenureMaxMonths: 12, tenureLabel: 'Up to 12 Months (1 Yr)', premiumAmount: 700, isActive: true },
+  { id: 'rsa-m-24', categoryCode: 'commercial', categoryName: 'Commercial / 3-Wheeler (RE/Maxima)', tenureMinMonths: 13, tenureMaxMonths: 24, tenureLabel: '13 to 24 Months (2 Yrs)', premiumAmount: 1300, isActive: true },
+  { id: 'rsa-m-36', categoryCode: 'commercial', categoryName: 'Commercial / 3-Wheeler (RE/Maxima)', tenureMinMonths: 25, tenureMaxMonths: 36, tenureLabel: '25 to 36 Months (3 Yrs)', premiumAmount: 1800, isActive: true },
+  { id: 'rsa-m-60', categoryCode: 'commercial', categoryName: 'Commercial / 3-Wheeler (RE/Maxima)', tenureMinMonths: 37, tenureMaxMonths: 60, tenureLabel: '37 to 60 Months (4-5 Yrs)', premiumAmount: 2300, isActive: true },
+];
+
 export const DEFAULT_MASTER_DATABASE: MasterDatabase = {
   dealers: DEFAULT_DEALERS,
   vehicles: DEFAULT_VEHICLES,
   dmaManagers: DEFAULT_DMA_MANAGERS,
   upfrontCharges: DEFAULT_UPFRONT_CHARGES,
+  rsaMaster: DEFAULT_RSA_MASTER,
 };

@@ -214,6 +214,8 @@ export default function App() {
     customRoi,
     paRequired,
     rsaRequired,
+    rsaMaster: masterDb.rsaMaster,
+    upfrontChargesMaster: masterDb.upfrontCharges,
     customerDetails,
   };
 

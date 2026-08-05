@@ -89,40 +89,18 @@ export function calculateStampDuty(scheme: Scheme, loanAmount: number): number {
   return Math.round(isFinite(val) ? val : 0);
 }
 
+import { RsaPremiumMasterItem } from '../types/masterData';
+
 /**
  * Calculate Road Side Assistance (RSA) Premium based on Vehicle Type/Category & Selected Tenure
  *
- * Rates Matrix (Standard Bajaj Auto Credit / Two-Wheeler RSA Slabs):
- * - Commuter / Scooter / Entry-level (<125cc):
- *     12 Months (1 Yr): ₹350
- *     18-24 Months (2 Yrs): ₹650
- *     30-36 Months (3 Yrs): ₹900
- *     42+ Months (4 Yrs): ₹1,150
- * - Sports / Executive (150cc - 250cc, Pulsar, Avenger, Dominar 250):
- *     12 Months (1 Yr): ₹450
- *     18-24 Months (2 Yrs): ₹800
- *     30-36 Months (3 Yrs): ₹1,100
- *     42+ Months (4 Yrs): ₹1,400
- * - Premium / Superbike (300cc+, KTM, Husqvarna, Dominar 400):
- *     12 Months (1 Yr): ₹600
- *     18-24 Months (2 Yrs): ₹1,100
- *     30-36 Months (3 Yrs): ₹1,500
- *     42+ Months (4 Yrs): ₹1,900
- * - Electric / EV (Chetak EV):
- *     12 Months (1 Yr): ₹500
- *     18-24 Months (2 Yrs): ₹900
- *     30-36 Months (3 Yrs): ₹1,250
- *     42+ Months (4 Yrs): ₹1,600
- * - Commercial / 3-Wheeler (RE, Maxima):
- *     12 Months (1 Yr): ₹700
- *     18-24 Months (2 Yrs): ₹1,300
- *     30-36 Months (3 Yrs): ₹1,800
- *     42+ Months (4 Yrs): ₹2,300
+ * Checks RSAPremiumMaster table if available, or falls back to standard Bajaj Auto Credit RSA matrix.
  */
 export function calculateRsaPremium(
   vehicleType?: string,
   tenureMonths: number = 36,
-  rsaOverride?: number
+  rsaOverride?: number,
+  rsaMaster?: RsaPremiumMasterItem[]
 ): number {
   if (rsaOverride !== undefined && isFinite(rsaOverride) && rsaOverride > 0) {
     return rsaOverride;
@@ -143,6 +121,21 @@ export function calculateRsaPremium(
     category = 'sports'; // Default (Pulsar / Executive 150-250cc)
   }
 
+  // Look up in active RSA Master table if passed
+  if (rsaMaster && Array.isArray(rsaMaster) && rsaMaster.length > 0) {
+    const match = rsaMaster.find(
+      (item) =>
+        item.isActive &&
+        item.categoryCode === category &&
+        tenureMonths >= item.tenureMinMonths &&
+        tenureMonths <= item.tenureMaxMonths
+    );
+    if (match && typeof match.premiumAmount === 'number') {
+      return match.premiumAmount;
+    }
+  }
+
+  // Fallback default matrix
   if (tenureMonths <= 12) {
     switch (category) {
       case 'commuter': return 350;
@@ -212,30 +205,130 @@ export function calculateTenureDetails(
   }
 
   // Charges Breakdown
-  // 1. Processing Fee (PF) = Loan Amount * PF% (or flat)
-  const serviceCharge = calculateServiceCharge(scheme, loanAmount);
-  // 2. Stamp Duty = Loan Amount * Stamp Duty% (or flat)
-  const stampDuty = calculateStampDuty(scheme, loanAmount);
-  // 3. Documentation Charge = Fixed Amount
-  const additionalUpfront = Math.max(0, Math.round(scheme.additionalUpfrontCharges || 0));
-  // 4. PA Insurance = Fixed Amount
-  const paCharge = input.paRequired ? Math.max(0, Math.round(input.paChargeOverride ?? scheme.paCharge ?? 350)) : 0;
+  let serviceCharge = calculateServiceCharge(scheme, loanAmount);
+  let stampDuty = calculateStampDuty(scheme, loanAmount);
+  let additionalUpfront = Math.max(0, Math.round(scheme.additionalUpfrontCharges || 0));
+  let paCharge = input.paRequired ? Math.max(0, Math.round(input.paChargeOverride ?? scheme.paCharge ?? 350)) : 0;
   
-  // 5. RSA Premium = Vehicle Type + Selected Tenure
   const vehicleType = input.vehicleCategory || input.customerDetails?.vehicleModel || 'Pulsar';
-  const calculatedRsa = calculateRsaPremium(vehicleType, tenure, input.rsaChargeOverride ?? scheme.rsaCharge);
-  const rsaCharge = input.rsaRequired ? calculatedRsa : 0;
-  
-  const upfrontInterest = Math.max(0, Math.round((loanAmount * (scheme.upfrontInterestPercent || 0)) / 100));
-  
-  // 6. Advance EMI = EMI * Advance EMI Count
-  const advanceEmiCount = Math.max(0, Math.round(scheme.advanceEmiCount || 0));
+  const calculatedRsa = calculateRsaPremium(vehicleType, tenure, input.rsaChargeOverride ?? scheme.rsaCharge, input.rsaMaster);
+  let rsaCharge = input.rsaRequired ? calculatedRsa : 0;
+  let advanceEmiCount = Math.max(0, Math.round(scheme.advanceEmiCount || 0));
+
+  let customChargesTotal = 0;
+  const upfrontBreakdownList: Array<{ id: string; name: string; amount: number; code: string; isOptional?: boolean }> = [];
+
+  // Override / calculate with Upfront Charges Master if available
+  if (input.upfrontChargesMaster && Array.isArray(input.upfrontChargesMaster) && input.upfrontChargesMaster.length > 0) {
+    const activeCharges = input.upfrontChargesMaster.filter((u) => u.isActive);
+
+    // 1. Processing Fee
+    const pfItem = activeCharges.find((u) => u.code === 'PF' || u.code === 'PROCESSING_FEE' || u.name.toLowerCase().includes('processing'));
+    if (pfItem) {
+      if (pfItem.chargeType === 'percentage') {
+        const pct = pfItem.percentage ?? pfItem.defaultValue ?? 0;
+        let val = (loanAmount * pct) / 100;
+        if (pfItem.minCap && pfItem.minCap > 0) val = Math.max(pfItem.minCap, val);
+        if (pfItem.maxCap && pfItem.maxCap > 0) val = Math.min(pfItem.maxCap, val);
+        serviceCharge = Math.round(val);
+      } else if (pfItem.chargeType === 'fixed') {
+        serviceCharge = Math.round(pfItem.fixedAmount ?? pfItem.defaultValue ?? serviceCharge);
+      } else if (pfItem.chargeType === 'formula') {
+        let val = pfItem.fixedAmount ?? ((loanAmount * (pfItem.percentage ?? pfItem.defaultValue ?? 0)) / 100);
+        serviceCharge = Math.round(val);
+      }
+    }
+
+    // 2. Stamp Duty
+    const stampItem = activeCharges.find((u) => u.code === 'STAMP_DUTY' || u.code === 'STAMP' || u.name.toLowerCase().includes('stamp'));
+    if (stampItem) {
+      if (stampItem.chargeType === 'percentage') {
+        const pct = stampItem.percentage ?? stampItem.defaultValue ?? 0;
+        let val = (loanAmount * pct) / 100;
+        if (stampItem.minCap && stampItem.minCap > 0) val = Math.max(stampItem.minCap, val);
+        if (stampItem.maxCap && stampItem.maxCap > 0) val = Math.min(stampItem.maxCap, val);
+        stampDuty = Math.round(val);
+      } else if (stampItem.chargeType === 'fixed') {
+        stampDuty = Math.round(stampItem.fixedAmount ?? stampItem.defaultValue ?? stampDuty);
+      }
+    }
+
+    // 3. Documentation
+    const docItem = activeCharges.find((u) => u.code === 'DOCUMENTATION' || u.code === 'DOC' || u.name.toLowerCase().includes('doc'));
+    if (docItem) {
+      if (docItem.chargeType === 'fixed') {
+        additionalUpfront = Math.round(docItem.fixedAmount ?? docItem.defaultValue ?? additionalUpfront);
+      } else if (docItem.chargeType === 'percentage') {
+        additionalUpfront = Math.round((loanAmount * (docItem.percentage ?? docItem.defaultValue ?? 0)) / 100);
+      }
+    }
+
+    // 4. PA Insurance
+    const paItem = activeCharges.find((u) => u.code === 'PA' || u.code === 'PA_INSURANCE' || u.name.toLowerCase().includes('pa insurance'));
+    if (paItem && input.paRequired) {
+      paCharge = Math.round(paItem.fixedAmount ?? paItem.defaultValue ?? paCharge);
+    }
+
+    // 5. RSA Premium
+    const rsaItem = activeCharges.find((u) => u.code === 'RSA' || u.code === 'RSA_PREMIUM' || u.name.toLowerCase().includes('road side'));
+    if (rsaItem && input.rsaRequired) {
+      if (rsaItem.chargeType === 'fixed' && rsaItem.fixedAmount && rsaItem.fixedAmount > 0) {
+        rsaCharge = rsaItem.fixedAmount;
+      }
+    }
+
+    // 6. Advance EMI Count
+    const advEmiItem = activeCharges.find((u) => u.code === 'ADVANCE_EMI' || u.code === 'ADV_EMI' || u.name.toLowerCase().includes('advance emi'));
+    if (advEmiItem) {
+      advanceEmiCount = Math.max(0, Math.round(advEmiItem.fixedAmount ?? advEmiItem.defaultValue ?? advanceEmiCount));
+    }
+
+    // Custom Charges (any charge not matching standard codes)
+    const stdCodes = ['PF', 'PROCESSING_FEE', 'STAMP_DUTY', 'STAMP', 'DOCUMENTATION', 'DOC', 'PA', 'PA_INSURANCE', 'RSA', 'RSA_PREMIUM', 'ADVANCE_EMI', 'ADV_EMI'];
+    const customItems = activeCharges.filter((u) => !stdCodes.includes(u.code.toUpperCase()));
+
+    for (const custom of customItems) {
+      let val = 0;
+      if (custom.chargeType === 'fixed') {
+        val = custom.fixedAmount ?? custom.defaultValue ?? 0;
+      } else if (custom.chargeType === 'percentage') {
+        val = (loanAmount * (custom.percentage ?? custom.defaultValue ?? 0)) / 100;
+      } else {
+        val = custom.fixedAmount ?? custom.defaultValue ?? 0;
+      }
+      if (custom.minCap && custom.minCap > 0) val = Math.max(custom.minCap, val);
+      if (custom.maxCap && custom.maxCap > 0) val = Math.min(custom.maxCap, val);
+      const roundedVal = Math.round(val);
+      if (roundedVal > 0) {
+        customChargesTotal += roundedVal;
+        upfrontBreakdownList.push({
+          id: custom.id,
+          name: custom.name,
+          code: custom.code,
+          amount: roundedVal,
+          isOptional: custom.isOptional,
+        });
+      }
+    }
+  }
+
   const advanceEmiAmount = Math.round(emi * advanceEmiCount);
+  const upfrontInterest = Math.max(0, Math.round((loanAmount * (scheme.upfrontInterestPercent || 0)) / 100));
+
+  // Populate standard breakdown list
+  upfrontBreakdownList.unshift(
+    { id: 'uf-pf', name: 'Processing Fee (PF)', code: 'PF', amount: serviceCharge },
+    { id: 'uf-stamp', name: 'Stamp Duty & Legal Charges', code: 'STAMP_DUTY', amount: stampDuty },
+    { id: 'uf-doc', name: 'Documentation Charges', code: 'DOCUMENTATION', amount: additionalUpfront },
+    { id: 'uf-pa', name: 'PA Insurance Cover', code: 'PA', amount: paCharge, isOptional: true },
+    { id: 'uf-rsa', name: 'Road Side Assistance (RSA)', code: 'RSA', amount: rsaCharge, isOptional: true },
+    { id: 'uf-adv', name: `Advance EMI (${advanceEmiCount}x EMI)`, code: 'ADVANCE_EMI', amount: advanceEmiAmount }
+  );
 
   // Total Upfront Charges Formula:
-  // Processing Fee + Stamp Duty + Documentation Charge + PA Insurance + RSA Premium + Advance EMI
-  const totalUpfrontCharges = serviceCharge + stampDuty + additionalUpfront + paCharge + rsaCharge + advanceEmiAmount;
-  const totalCharges = serviceCharge + stampDuty + additionalUpfront + paCharge + rsaCharge + upfrontInterest;
+  // Processing Fee + Stamp Duty + Documentation Charge + PA Insurance + RSA Premium + Advance EMI + Custom Charges
+  const totalUpfrontCharges = serviceCharge + stampDuty + additionalUpfront + paCharge + rsaCharge + advanceEmiAmount + customChargesTotal;
+  const totalCharges = serviceCharge + stampDuty + additionalUpfront + paCharge + rsaCharge + upfrontInterest + customChargesTotal;
 
   // Down Payment formula:
   // Down Payment = (Showroom On-Road Price - Loan Amount) + Total Upfront Charges
@@ -267,6 +360,7 @@ export function calculateTenureDetails(
     downPayment,
     totalPayableAmount,
     ltvPercent: Math.round(ltvPercent * 100) / 100,
+    upfrontBreakdownList,
     debugFormula: {
       pmtFormula: `PMT(${roi}% p.a. / 12, ${tenure} months, ₹${loanAmount.toLocaleString('en-IN')}) = ₹${rawEmi.toFixed(2)} → Rounded: ₹${emi.toLocaleString('en-IN')}`,
       downPaymentFormula: `Margin (₹${priceMargin.toLocaleString('en-IN')}) + Total Upfront Charges (₹${totalUpfrontCharges.toLocaleString('en-IN')}) = ₹${downPayment.toLocaleString('en-IN')}`,

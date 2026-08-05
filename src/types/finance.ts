@@ -40,6 +40,8 @@ export interface Scheme {
   isActive: boolean;
 }
 
+import { RsaPremiumMasterItem } from './masterData';
+
 export interface CustomerDetails {
   customerName: string;
   mobileNumber: string;
@@ -56,6 +58,8 @@ export interface CustomerDetails {
   existingEmi?: number;
 }
 
+import { UpfrontChargeMasterItem, RsaPremiumMasterItem } from './masterData';
+
 export interface CalculationInput {
   selectedSchemeCode: string;
   showroomOrp: number; // Showroom On Road Price
@@ -68,6 +72,8 @@ export interface CalculationInput {
   rsaRequired: boolean;
   rsaChargeOverride?: number;
   vehicleCategory?: string;
+  rsaMaster?: RsaPremiumMasterItem[];
+  upfrontChargesMaster?: UpfrontChargeMasterItem[];
   customerDetails: CustomerDetails;
 }
 
@@ -84,7 +90,7 @@ export interface TenureCalculation {
   upfrontInterest: number;
   advanceEmiAmount: number;
   totalCharges: number; // serviceCharge + stampDuty + additionalUpfront + paCharge + rsaCharge + upfrontInterest
-  totalUpfrontCharges: number; // Processing Fee + Stamp Duty + Documentation + PA Insurance + RSA Premium + Advance EMI
+  totalUpfrontCharges: number; // Processing Fee + Stamp Duty + Documentation + PA Insurance + RSA Premium + Advance EMI + Custom Charges
   downPayment: number; // (Showroom ORP - Loan Amount) + totalUpfrontCharges
   totalPayableAmount: number; // downPayment + EMI * (tenureMonths - advanceEmiCount) = Showroom ORP + totalUpfrontCharges + totalInterest
   ltvPercent: number; // (Loan Amount / SFDC ORP) * 100
@@ -92,6 +98,7 @@ export interface TenureCalculation {
   rawEmi: number; // Unrounded exact EMI
   priceMargin: number; // Showroom ORP - Loan Amount
   advanceEmiCount: number; // Number of advance EMIs
+  upfrontBreakdownList?: Array<{ id: string; name: string; amount: number; code: string; isOptional?: boolean }>;
   debugFormula?: {
     pmtFormula: string;
     downPaymentFormula: string;

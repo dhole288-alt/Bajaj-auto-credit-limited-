@@ -330,7 +330,7 @@ export async function generateQuotationPDF(record: QuotationRecord): Promise<voi
             </div>
           </div>
 
-          <!-- 4. Sanctioned Finance Summary -->
+          <!-- 4. Sanctioned Finance Summary & Upfront Charges Breakdown -->
           <div class="section-box" style="border-color: #005cb9; background: #f0f7ff;">
             <div class="section-title" style="display:flex; justify-content:space-between;">
               <span>Sanctioned Finance Summary (${selectedTenure} Months Tenure)</span>
@@ -352,6 +352,25 @@ export async function generateQuotationPDF(record: QuotationRecord): Promise<voi
               <div class="sum-card-highlight">
                 <span class="sum-label" style="color: #fef08a;">Monthly EMI</span>
                 <span class="sum-val" style="color: white; font-size: 18px;">₹${currentCalc.emi.toLocaleString('en-IN')} / mo</span>
+              </div>
+            </div>
+
+            <!-- Upfront Charges Itemized Table in PDF -->
+            <div style="margin-top: 12px; border-top: 1px solid #bfdbfe; padding-top: 10px;">
+              <div style="font-size: 11px; font-weight: 900; color: #005cb9; text-transform: uppercase; margin-bottom: 6px;">
+                Itemized Upfront Charges Component Breakdown
+              </div>
+              <div class="grid-2" style="font-size: 11px;">
+                <div class="detail-row"><span class="detail-label">Processing Fee (PF):</span><span class="detail-val">₹${currentCalc.serviceCharge.toLocaleString('en-IN')}</span></div>
+                <div class="detail-row"><span class="detail-label">Stamp Duty & Legal:</span><span class="detail-val">₹${currentCalc.stampDuty.toLocaleString('en-IN')}</span></div>
+                <div class="detail-row"><span class="detail-label">Documentation Charges:</span><span class="detail-val">₹${currentCalc.additionalUpfront.toLocaleString('en-IN')}</span></div>
+                <div class="detail-row"><span class="detail-label">PA Insurance Cover:</span><span class="detail-val">₹${currentCalc.paCharge.toLocaleString('en-IN')}</span></div>
+                <div class="detail-row"><span class="detail-label">RSA Premium (${bikeInfo.name}, ${selectedTenure}M):</span><span class="detail-val">₹${currentCalc.rsaCharge.toLocaleString('en-IN')}</span></div>
+                <div class="detail-row"><span class="detail-label">Advance EMI (${currentCalc.advanceEmiCount}x EMI):</span><span class="detail-val">₹${currentCalc.advanceEmiAmount.toLocaleString('en-IN')}</span></div>
+              </div>
+              <div style="margin-top: 8px; background-color: #dbeafe; padding: 6px 10px; border-radius: 6px; display: flex; justify-content: space-between; font-weight: 900; color: #005cb9; font-size: 12px;">
+                <span>TOTAL UPFRONT CHARGES</span>
+                <span>₹${currentCalc.totalUpfrontCharges.toLocaleString('en-IN')}</span>
               </div>
             </div>
           </div>

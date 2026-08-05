@@ -36,12 +36,30 @@ export interface UpfrontChargeMasterItem {
   id: string;
   code: string;
   name: string;
-  chargeType: 'percentage' | 'fixed';
+  chargeType: 'percentage' | 'fixed' | 'formula';
   defaultValue: number;
+  percentage?: number;
+  fixedAmount?: number;
+  formula?: string;
+  ruleBasis?: string;
+  vehicleCategory?: string;
+  tenureMonths?: string;
+  displayOrder?: number;
   minCap?: number;
   maxCap?: number;
   isOptional: boolean;
   description: string;
+  isActive: boolean;
+}
+
+export interface RsaPremiumMasterItem {
+  id: string;
+  categoryCode: 'commuter' | 'sports' | 'premium' | 'ev' | 'commercial';
+  categoryName: string;
+  tenureMinMonths: number;
+  tenureMaxMonths: number;
+  tenureLabel: string;
+  premiumAmount: number;
   isActive: boolean;
 }
 
@@ -50,4 +68,5 @@ export interface MasterDatabase {
   vehicles: VehicleMaster[];
   dmaManagers: DmaManager[];
   upfrontCharges: UpfrontChargeMasterItem[];
+  rsaMaster?: RsaPremiumMasterItem[];
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Scheme } from '../types/finance';
-import { MasterDatabase, Dealer, VehicleMaster, DmaManager, Branch, UpfrontChargeMasterItem } from '../types/masterData';
+import { MasterDatabase, Dealer, VehicleMaster, DmaManager, Branch, UpfrontChargeMasterItem, RsaPremiumMasterItem } from '../types/masterData';
 import { parseSchemeExcelFile, exportSchemesToExcel } from '../utils/excelParser';
 import { parseVehicleExcel, exportVehiclesToExcel, exportDmaToExcel, exportFullDatabaseBackup } from '../utils/masterExcelParser';
 import {
@@ -33,6 +33,10 @@ import {
   Coins,
   Calculator,
   Receipt,
+  Wrench,
+  Save,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { BajajLogo } from './BajajLogo';
 
@@ -54,13 +58,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onResetDefaultSchemes,
   onResetDefaultMasterDb,
 }) => {
-  const [adminSubTab, setAdminSubTab] = useState<'schemes' | 'dealers' | 'vehicles' | 'dma' | 'upfront' | 'backup'>('vehicles');
+  const [adminSubTab, setAdminSubTab] = useState<'schemes' | 'dealers' | 'vehicles' | 'dma' | 'upfront' | 'rsa' | 'backup'>('vehicles');
 
   // Search queries
   const [branchSearch, setBranchSearch] = useState('');
   const [vehicleSearch, setVehicleSearch] = useState('');
   const [dmaSearch, setDmaSearch] = useState('');
   const [upfrontSearch, setUpfrontSearch] = useState('');
+  const [rsaSearch, setRsaSearch] = useState('');
 
   // Modals state
   const [editingScheme, setEditingScheme] = useState<Scheme | null>(null);
@@ -77,6 +82,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const [editingUpfront, setEditingUpfront] = useState<UpfrontChargeMasterItem | null>(null);
   const [isUpfrontModalOpen, setIsUpfrontModalOpen] = useState(false);
+  const [inlineUpfrontId, setInlineUpfrontId] = useState<string | null>(null);
+  const [inlineUpfrontDraft, setInlineUpfrontDraft] = useState<UpfrontChargeMasterItem | null>(null);
+
+  const [editingRsa, setEditingRsa] = useState<RsaPremiumMasterItem | null>(null);
+  const [isRsaModalOpen, setIsRsaModalOpen] = useState(false);
 
   const [newBranchName, setNewBranchName] = useState('');
 
@@ -496,6 +506,63 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       u.description.toLowerCase().includes(upfrontSearch.toLowerCase())
   );
 
+  const handleToggleRsaActive = (id: string) => {
+    setMasterDb((prev) => ({
+      ...prev,
+      rsaMaster: (prev.rsaMaster || []).map((r) => (r.id === id ? { ...r, isActive: !r.isActive } : r)),
+    }));
+  };
+
+  const handleDeleteRsaItem = (id: string) => {
+    if (confirm('Delete this RSA rate slab from Master?')) {
+      setMasterDb((prev) => ({
+        ...prev,
+        rsaMaster: (prev.rsaMaster || []).filter((r) => r.id !== id),
+      }));
+    }
+  };
+
+  const handleSaveRsaModal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRsa) return;
+
+    setMasterDb((prev) => {
+      const list = prev.rsaMaster || [];
+      const idx = list.findIndex((r) => r.id === editingRsa.id);
+      let updated = [...list];
+      if (idx >= 0) {
+        updated[idx] = editingRsa;
+      } else {
+        updated = [editingRsa, ...updated];
+      }
+      return { ...prev, rsaMaster: updated };
+    });
+
+    setIsRsaModalOpen(false);
+    setEditingRsa(null);
+  };
+
+  const createNewRsaRate = () => {
+    setEditingRsa({
+      id: `rsa-${Date.now()}`,
+      categoryCode: 'sports',
+      categoryName: 'Sports / Executive (150-250cc)',
+      tenureMinMonths: 25,
+      tenureMaxMonths: 36,
+      tenureLabel: '25 to 36 Months (3 Yrs)',
+      premiumAmount: 1100,
+      isActive: true,
+    });
+    setIsRsaModalOpen(true);
+  };
+
+  const filteredRsa = (masterDb.rsaMaster || []).filter(
+    (r) =>
+      r.categoryName.toLowerCase().includes(rsaSearch.toLowerCase()) ||
+      r.categoryCode.toLowerCase().includes(rsaSearch.toLowerCase()) ||
+      r.tenureLabel.toLowerCase().includes(rsaSearch.toLowerCase())
+  );
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-7 border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
       {/* Header Banner - Official Bajaj Auto Credit Portal Theme */}
@@ -590,6 +657,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         >
           <Coins className="w-4 h-4" />
           <span>Upfront Charges Master ({(masterDb.upfrontCharges || []).length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setAdminSubTab('rsa')}
+          className={`px-4 py-2.5 rounded-2xl font-black text-xs transition-all flex items-center space-x-2 whitespace-nowrap ${
+            adminSubTab === 'rsa'
+              ? 'bg-[#024b9c] text-white shadow-md glow-blue'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+          }`}
+        >
+          <Wrench className="w-4 h-4 text-amber-500" />
+          <span>RSA Premium Matrix ({(masterDb.rsaMaster || []).length})</span>
         </button>
 
         <button
@@ -1111,6 +1191,123 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <tr>
                       <td colSpan={8} className="p-8 text-center text-slate-400 font-bold">
                         No upfront charge items found matching "{upfrontSearch}"
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* SUB-TAB: RSA PREMIUM MATRIX MASTER */}
+      {/* ======================================================== */}
+      {adminSubTab === 'rsa' && (
+        <div className="space-y-4 animate-fade-in">
+          <div className="p-4 rounded-2xl bg-amber-50/70 dark:bg-slate-800/60 border border-amber-200/80 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-extrabold text-amber-900 dark:text-amber-300 flex items-center space-x-1.5">
+                <Wrench className="w-4 h-4 text-amber-500" />
+                <span>Roadside Assistance (RSA) Premium Matrix Master</span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                Configure RSA Premium rates slab matrix per Vehicle Category and Tenure Duration
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:w-64">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search Category / Tenure..."
+                  value={rsaSearch}
+                  onChange={(e) => setRsaSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={createNewRsaRate}
+                className="px-3.5 py-1.5 rounded-xl bg-[#024b9c] text-white font-extrabold text-xs shadow-md shrink-0 flex items-center space-x-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add RSA Rate Slab</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#024b9c] text-white font-extrabold">
+                  <tr>
+                    <th className="p-3">Vehicle Category Code</th>
+                    <th className="p-3">Category Name</th>
+                    <th className="p-3">Tenure Slab (Months)</th>
+                    <th className="p-3 text-right">RSA Premium (₹)</th>
+                    <th className="p-3 text-center">Status</th>
+                    <th className="p-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                  {filteredRsa.map((r) => (
+                    <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      <td className="p-3 font-mono font-bold text-[#024b9c] dark:text-blue-400">
+                        {r.categoryCode.toUpperCase()}
+                      </td>
+                      <td className="p-3 font-extrabold text-slate-900 dark:text-white">
+                        {r.categoryName}
+                      </td>
+                      <td className="p-3 font-bold text-slate-700 dark:text-slate-300">
+                        {r.tenureLabel} ({r.tenureMinMonths} - {r.tenureMaxMonths}M)
+                      </td>
+                      <td className="p-3 text-right font-black text-amber-600 dark:text-amber-400 text-sm">
+                        ₹{r.premiumAmount.toLocaleString('en-IN')}
+                      </td>
+                      <td className="p-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleRsaActive(r.id)}
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
+                            r.isActive ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                          }`}
+                        >
+                          {r.isActive ? 'Active' : 'Disabled'}
+                        </button>
+                      </td>
+                      <td className="p-3 text-right">
+                        <div className="flex items-center justify-end space-x-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingRsa(r);
+                              setIsRsaModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-950 text-[#024b9c]"
+                            title="Edit RSA Slab"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRsaItem(r.id)}
+                            className="p-1.5 rounded-lg bg-red-50 dark:bg-red-950 text-red-600"
+                            title="Delete Slab"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredRsa.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-400 font-bold">
+                        No RSA slabs found matching "{rsaSearch}"
                       </td>
                     </tr>
                   )}
@@ -1699,6 +1896,138 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </button>
                 <button type="submit" className="px-5 py-2 bg-[#024b9c] text-white rounded-xl font-extrabold shadow-md">
                   Save Upfront Charge
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit / Add RSA Premium Master Slab */}
+      {isRsaModalOpen && editingRsa && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 animate-scale-up">
+            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
+              <h3 className="text-sm font-black text-[#024b9c] dark:text-blue-300 flex items-center space-x-2">
+                <Wrench className="w-4 h-4 text-amber-500" />
+                <span>Configure RSA Premium Rate Slab</span>
+              </h3>
+              <button type="button" onClick={() => setIsRsaModalOpen(false)} className="p-1 rounded-lg text-slate-400 hover:bg-slate-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRsaModal} className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold block mb-1">Vehicle Category Code</label>
+                  <select
+                    value={editingRsa.categoryCode}
+                    onChange={(e) => {
+                      const code = e.target.value as any;
+                      let name = 'Sports / Executive (150-250cc)';
+                      if (code === 'commuter') name = 'Commuter / Scooter (<125cc)';
+                      if (code === 'premium') name = 'Premium / Superbike (300cc+)';
+                      if (code === 'ev') name = 'Electric Vehicle (EV / Chetak)';
+                      if (code === 'commercial') name = 'Commercial / 3-Wheeler (RE/Maxima)';
+                      setEditingRsa({ ...editingRsa, categoryCode: code, categoryName: name });
+                    }}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                  >
+                    <option value="commuter">Commuter / Scooter (&lt;125cc)</option>
+                    <option value="sports">Sports / Executive (150-250cc)</option>
+                    <option value="premium">Premium / Superbike (300cc+)</option>
+                    <option value="ev">Electric / EV (Chetak)</option>
+                    <option value="commercial">Commercial / 3-Wheeler (RE/Maxima)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold block mb-1">Category Display Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingRsa.categoryName}
+                    onChange={(e) => setEditingRsa({ ...editingRsa, categoryName: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold block mb-1">Tenure Min Months</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={editingRsa.tenureMinMonths}
+                    onChange={(e) => setEditingRsa({ ...editingRsa, tenureMinMonths: Number(e.target.value) })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold block mb-1">Tenure Max Months</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={editingRsa.tenureMaxMonths}
+                    onChange={(e) => setEditingRsa({ ...editingRsa, tenureMaxMonths: Number(e.target.value) })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold block mb-1">Tenure Display Label</label>
+                <input
+                  type="text"
+                  required
+                  value={editingRsa.tenureLabel}
+                  onChange={(e) => setEditingRsa({ ...editingRsa, tenureLabel: e.target.value })}
+                  placeholder="e.g. 25 to 36 Months (3 Yrs)"
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold block mb-1">RSA Premium Amount (₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={editingRsa.premiumAmount}
+                    onChange={(e) => setEditingRsa({ ...editingRsa, premiumAmount: Number(e.target.value) })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-black text-amber-600 dark:text-amber-400 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold block mb-1">Slab Status</label>
+                  <select
+                    value={editingRsa.isActive ? 'active' : 'disabled'}
+                    onChange={(e) => setEditingRsa({ ...editingRsa, isActive: e.target.value === 'active' })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                  >
+                    <option value="active">Active (Include in Calculator)</option>
+                    <option value="disabled">Disabled (Do Not Apply)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4 border-t dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsRsaModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="px-5 py-2 bg-[#024b9c] text-white rounded-xl font-extrabold shadow-md">
+                  Save RSA Rate Slab
                 </button>
               </div>
             </form>
