@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 
 interface AnimatedNumberProps {
   value: number;
@@ -15,44 +15,18 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
   decimals = 0,
   className = '',
 }) => {
-  const [displayValue, setDisplayValue] = useState<number>(value);
-
-  useEffect(() => {
-    const startValue = displayValue;
-    const endValue = value;
-    if (startValue === endValue) return;
-
-    const duration = 400; // ms
-    const startTime = performance.now();
-
-    const updateNumber = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      
-      // Ease out quad
-      const easeProgress = 1 - (1 - progress) * (1 - progress);
-      const current = startValue + (endValue - startValue) * easeProgress;
-
-      setDisplayValue(current);
-
-      if (progress < 1) {
-        requestAnimationFrame(updateNumber);
-      } else {
-        setDisplayValue(endValue);
-      }
-    };
-
-    const animId = requestAnimationFrame(updateNumber);
-    return () => cancelAnimationFrame(animId);
-  }, [value]);
-
-  const formatted = decimals > 0 
-    ? displayValue.toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
-    : Math.round(displayValue).toLocaleString('en-IN');
+  const numVal = isNaN(value) || !isFinite(value) ? 0 : value;
+  const formatted =
+    decimals > 0
+      ? numVal.toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+      : Math.round(numVal).toLocaleString('en-IN');
 
   return (
-    <span className={`inline-block transition-all duration-100 ${className}`}>
-      {prefix}{formatted}{suffix}
+    <span className={`inline-block ${className}`}>
+      {prefix}
+      {formatted}
+      {suffix}
     </span>
   );
 };
+

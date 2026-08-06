@@ -1,3 +1,5 @@
+import { UpfrontChargeMasterItem, RsaPremiumMasterItem } from './masterData';
+
 export type RateType = 'reducing' | 'flat';
 
 export interface RoiSlab {
@@ -40,8 +42,6 @@ export interface Scheme {
   isActive: boolean;
 }
 
-import { RsaPremiumMasterItem } from './masterData';
-
 export interface CustomerDetails {
   customerName: string;
   mobileNumber: string;
@@ -57,8 +57,6 @@ export interface CustomerDetails {
   monthlyIncome?: number;
   existingEmi?: number;
 }
-
-import { UpfrontChargeMasterItem, RsaPremiumMasterItem } from './masterData';
 
 export interface CalculationInput {
   selectedSchemeCode: string;
@@ -93,6 +91,7 @@ export interface TenureCalculation {
   totalUpfrontCharges: number; // Processing Fee + Stamp Duty + Documentation + PA Insurance + RSA Premium + Advance EMI + Custom Charges
   downPayment: number; // (Showroom ORP - Loan Amount) + totalUpfrontCharges
   totalPayableAmount: number; // downPayment + EMI * (tenureMonths - advanceEmiCount) = Showroom ORP + totalUpfrontCharges + totalInterest
+  totalOutflow: number; // (EMI * tenure) + Down Payment
   ltvPercent: number; // (Loan Amount / SFDC ORP) * 100
   appliedRoi: number; // Annual ROI % applied for this tenure
   rawEmi: number; // Unrounded exact EMI

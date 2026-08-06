@@ -437,19 +437,51 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     e.preventDefault();
     if (!editingUpfront) return;
 
+    const updatedItem: UpfrontChargeMasterItem = {
+      ...editingUpfront,
+      defaultValue:
+        editingUpfront.chargeType === 'percentage'
+          ? (editingUpfront.percentage ?? editingUpfront.defaultValue)
+          : (editingUpfront.fixedAmount ?? editingUpfront.defaultValue),
+    };
+
     setMasterDb((prev) => {
       const currentUpfronts = prev.upfrontCharges || [];
-      const idx = currentUpfronts.findIndex((u) => u.id === editingUpfront.id);
+      const idx = currentUpfronts.findIndex((u) => u.id === updatedItem.id);
       if (idx >= 0) {
         const updated = [...currentUpfronts];
-        updated[idx] = editingUpfront;
+        updated[idx] = updatedItem;
         return { ...prev, upfrontCharges: updated };
       }
-      return { ...prev, upfrontCharges: [editingUpfront, ...currentUpfronts] };
+      return { ...prev, upfrontCharges: [updatedItem, ...currentUpfronts] };
     });
 
     setIsUpfrontModalOpen(false);
     setEditingUpfront(null);
+  };
+
+  const handleSaveInlineUpfront = (itemToSave: UpfrontChargeMasterItem) => {
+    const updatedItem: UpfrontChargeMasterItem = {
+      ...itemToSave,
+      defaultValue:
+        itemToSave.chargeType === 'percentage'
+          ? (itemToSave.percentage ?? itemToSave.defaultValue)
+          : (itemToSave.fixedAmount ?? itemToSave.defaultValue),
+    };
+
+    setMasterDb((prev) => {
+      const currentUpfronts = prev.upfrontCharges || [];
+      const idx = currentUpfronts.findIndex((u) => u.id === updatedItem.id);
+      if (idx >= 0) {
+        const updated = [...currentUpfronts];
+        updated[idx] = updatedItem;
+        return { ...prev, upfrontCharges: updated };
+      }
+      return { ...prev, upfrontCharges: [updatedItem, ...currentUpfronts] };
+    });
+
+    setInlineUpfrontId(null);
+    setInlineUpfrontDraft(null);
   };
 
   const handleToggleUpfrontActive = (id: string) => {
@@ -469,14 +501,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   const createNewUpfrontCharge = () => {
+    const count = (masterDb.upfrontCharges || []).length + 1;
     const newUpfront: UpfrontChargeMasterItem = {
       id: `uf-${Date.now()}`,
-      code: `CHARGE_${(masterDb.upfrontCharges || []).length + 1}`,
-      name: 'Custom Upfront Fee Component',
+      code: `CHARGE_${count}`,
+      name: `Custom Upfront Charge ${count}`,
       chargeType: 'fixed',
       defaultValue: 500,
+      percentage: 0,
+      fixedAmount: 500,
+      formula: 'Fixed Amount = ₹500',
+      ruleBasis: 'Flat Fee per Disbursement',
+      vehicleCategory: 'All Vehicles',
+      tenureMonths: 'All Tenures',
+      displayOrder: count,
       isOptional: true,
-      description: 'Custom upfront charge added by Admin',
+      description: 'Custom upfront charge managed by Admin',
       isActive: true,
     };
     setEditingUpfront(newUpfront);
@@ -1108,85 +1148,244 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <thead className="bg-[#024b9c] text-white font-extrabold">
                   <tr>
                     <th className="p-3">Charge Code</th>
-                    <th className="p-3">Component Name</th>
+                    <th className="p-3">Charge Name</th>
                     <th className="p-3">Type</th>
-                    <th className="p-3">Default Rate / Amount</th>
-                    <th className="p-3">Calculation Formula</th>
-                    <th className="p-3 text-center">Optional</th>
+                    <th className="p-3">Rate / Amount</th>
+                    <th className="p-3">Formula</th>
+                    <th className="p-3">Rule Basis & Scope</th>
                     <th className="p-3 text-center">Status</th>
                     <th className="p-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                  {filteredUpfronts.map((u) => (
-                    <tr key={u.id} className="hover:bg-blue-50/40 dark:hover:bg-slate-800/50 transition-colors">
-                      <td className="p-3 font-mono font-black text-[#024b9c] dark:text-blue-400">{u.code}</td>
-                      <td className="p-3 font-extrabold text-slate-900 dark:text-white">
-                        <div>{u.name}</div>
-                        <div className="text-[10px] text-slate-400 font-normal">{u.description}</div>
-                      </td>
-                      <td className="p-3">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            u.chargeType === 'percentage'
-                              ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
-                              : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                          }`}
-                        >
-                          {u.chargeType === 'percentage' ? 'Percentage (%)' : 'Fixed Rupee (₹)'}
-                        </span>
-                      </td>
-                      <td className="p-3 font-black text-slate-900 dark:text-white">
-                        {u.chargeType === 'percentage' ? `${u.defaultValue}%` : `₹${u.defaultValue.toLocaleString('en-IN')}`}
-                      </td>
-                      <td className="p-3 text-slate-600 dark:text-slate-300 font-medium italic">
-                        {u.chargeType === 'percentage' ? `Loan Amount × ${u.defaultValue}%` : `Fixed ₹${u.defaultValue}`}
-                      </td>
-                      <td className="p-3 text-center">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            u.isOptional ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
-                          }`}
-                        >
-                          {u.isOptional ? 'Optional' : 'Mandatory'}
-                        </span>
-                      </td>
-                      <td className="p-3 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleUpfrontActive(u.id)}
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
-                            u.isActive ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-200 text-slate-600'
-                          }`}
-                        >
-                          {u.isActive ? 'Active' : 'Disabled'}
-                        </button>
-                      </td>
-                      <td className="p-3 text-right">
-                        <div className="flex items-center justify-end space-x-1">
+                  {filteredUpfronts.map((u) => {
+                    const isInline = inlineUpfrontId === u.id && inlineUpfrontDraft;
+                    const item = isInline ? inlineUpfrontDraft : u;
+
+                    return (
+                      <tr key={u.id} className="hover:bg-blue-50/40 dark:hover:bg-slate-800/50 transition-colors">
+                        {/* Charge Code */}
+                        <td className="p-3 font-mono font-black text-[#024b9c] dark:text-blue-400">
+                          {isInline ? (
+                            <input
+                              type="text"
+                              value={item.code}
+                              onChange={(e) => setInlineUpfrontDraft({ ...item, code: e.target.value.toUpperCase() })}
+                              className="w-24 p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono text-xs font-bold"
+                            />
+                          ) : (
+                            u.code
+                          )}
+                        </td>
+
+                        {/* Charge Name */}
+                        <td className="p-3 font-extrabold text-slate-900 dark:text-white">
+                          {isInline ? (
+                            <div className="space-y-1">
+                              <input
+                                type="text"
+                                value={item.name}
+                                onChange={(e) => setInlineUpfrontDraft({ ...item, name: e.target.value })}
+                                className="w-full p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold"
+                              />
+                              <input
+                                type="text"
+                                value={item.description || ''}
+                                onChange={(e) => setInlineUpfrontDraft({ ...item, description: e.target.value })}
+                                placeholder="Description / Formula notes..."
+                                className="w-full p-1 text-[10px] rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-500"
+                              />
+                            </div>
+                          ) : (
+                            <div>
+                              <div>{u.name}</div>
+                              <div className="text-[10px] text-slate-400 font-normal">{u.description}</div>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Type */}
+                        <td className="p-3">
+                          {isInline ? (
+                            <select
+                              value={item.chargeType}
+                              onChange={(e) => setInlineUpfrontDraft({ ...item, chargeType: e.target.value as any })}
+                              className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold"
+                            >
+                              <option value="percentage">Percentage (%)</option>
+                              <option value="fixed">Fixed (₹)</option>
+                              <option value="formula">Formula</option>
+                            </select>
+                          ) : (
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                u.chargeType === 'percentage'
+                                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                                  : u.chargeType === 'fixed'
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                  : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300'
+                              }`}
+                            >
+                              {u.chargeType === 'percentage'
+                                ? 'Percentage (%)'
+                                : u.chargeType === 'fixed'
+                                ? 'Fixed Rupee (₹)'
+                                : 'Formula'}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Rate / Amount */}
+                        <td className="p-3 font-black text-slate-900 dark:text-white">
+                          {isInline ? (
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={item.defaultValue}
+                              onChange={(e) =>
+                                setInlineUpfrontDraft({
+                                  ...item,
+                                  defaultValue: Number(e.target.value),
+                                  percentage: item.chargeType === 'percentage' ? Number(e.target.value) : item.percentage,
+                                  fixedAmount: item.chargeType === 'fixed' ? Number(e.target.value) : item.fixedAmount,
+                                })
+                              }
+                              className="w-20 p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold"
+                            />
+                          ) : (
+                            u.chargeType === 'percentage' ? `${u.defaultValue}%` : `₹${u.defaultValue.toLocaleString('en-IN')}`
+                          )}
+                        </td>
+
+                        {/* Calculation Formula */}
+                        <td className="p-3 text-slate-600 dark:text-slate-300 font-medium italic">
+                          {isInline ? (
+                            <input
+                              type="text"
+                              value={item.formula || item.description || ''}
+                              onChange={(e) => setInlineUpfrontDraft({ ...item, formula: e.target.value, description: e.target.value })}
+                              placeholder="e.g. Loan Amount × PF%"
+                              className="w-full p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
+                            />
+                          ) : (
+                            u.formula || (u.chargeType === 'percentage' ? `Loan Amount × ${u.defaultValue}%` : `Fixed ₹${u.defaultValue}`)
+                          )}
+                        </td>
+
+                        {/* Rule Basis & Scope */}
+                        <td className="p-3 text-slate-600 dark:text-slate-300 text-[11px]">
+                          {isInline ? (
+                            <div className="space-y-1">
+                              <input
+                                type="text"
+                                value={item.ruleBasis || ''}
+                                onChange={(e) => setInlineUpfrontDraft({ ...item, ruleBasis: e.target.value })}
+                                placeholder="Rule basis (e.g. On Loan Amount)"
+                                className="w-full p-1 rounded-md border text-[10px]"
+                              />
+                            </div>
+                          ) : (
+                            <div>
+                              <div className="font-bold text-slate-800 dark:text-slate-200">{u.ruleBasis || 'Standard Rule'}</div>
+                              <div className="text-[10px] text-slate-400">{u.vehicleCategory || 'All Vehicles'} • {u.tenureMonths || 'All Tenures'}</div>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Status */}
+                        <td className="p-3 text-center">
                           <button
                             type="button"
                             onClick={() => {
-                              setEditingUpfront(u);
-                              setIsUpfrontModalOpen(true);
+                              if (isInline) {
+                                setInlineUpfrontDraft({ ...item, isActive: !item.isActive });
+                              } else {
+                                handleToggleUpfrontActive(u.id);
+                              }
                             }}
-                            className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-950 text-[#024b9c]"
-                            title="Edit Upfront Component"
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-black cursor-pointer transition-colors ${
+                              item.isActive
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
+                                : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                            }`}
+                            title="Click to toggle Active / Inactive"
                           >
-                            <Edit2 className="w-3.5 h-3.5" />
+                            {item.isActive ? 'Active' : 'Disabled'}
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteUpfrontCharge(u.id)}
-                            className="p-1.5 rounded-lg bg-red-50 dark:bg-red-950 text-red-600"
-                            title="Delete Component"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end space-x-1">
+                            {isInline ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveInlineUpfront(item)}
+                                  className="p-1.5 rounded-lg bg-emerald-600 text-white font-bold flex items-center space-x-1"
+                                  title="Save Inline Changes"
+                                >
+                                  <Save className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setInlineUpfrontId(null);
+                                    setInlineUpfrontDraft(null);
+                                  }}
+                                  className="p-1.5 rounded-lg bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
+                                  title="Cancel Edit"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setInlineUpfrontId(u.id);
+                                    setInlineUpfrontDraft({ ...u });
+                                  }}
+                                  className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-950 text-[#024b9c] hover:bg-blue-200"
+                                  title="Quick Inline Edit"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingUpfront(u);
+                                    setIsUpfrontModalOpen(true);
+                                  }}
+                                  className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 hover:bg-purple-200"
+                                  title="Deep Edit Modal"
+                                >
+                                  <Wrench className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleUpfrontActive(u.id)}
+                                  className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                                  title={u.isActive ? 'Hide / Deactivate' : 'Show / Activate'}
+                                >
+                                  {u.isActive ? <Eye className="w-3.5 h-3.5 text-emerald-600" /> : <EyeOff className="w-3.5 h-3.5 text-slate-400" />}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteUpfrontCharge(u.id)}
+                                  className="p-1.5 rounded-lg bg-red-50 dark:bg-red-950 text-red-600 hover:bg-red-100"
+                                  title="Delete Component"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {filteredUpfronts.length === 0 && (
                     <tr>
                       <td colSpan={8} className="p-8 text-center text-slate-400 font-bold">
@@ -1797,11 +1996,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       {/* Upfront Charge Edit Modal */}
       {isUpfrontModalOpen && editingUpfront && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
               <h3 className="text-base font-extrabold text-[#024b9c] dark:text-blue-400 flex items-center space-x-2">
                 <Coins className="w-5 h-5 text-amber-500" />
-                <span>Manage Upfront Charge Master Component</span>
+                <span>Configure Upfront Charge Master Component</span>
               </h3>
               <button type="button" onClick={() => setIsUpfrontModalOpen(false)} className="p-1 rounded-lg text-slate-400 hover:bg-slate-100">
                 <X className="w-5 h-5" />
@@ -1822,22 +2021,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
 
                 <div>
-                  <label className="font-bold block mb-1">Calculation Type</label>
+                  <label className="font-bold block mb-1">Charge Type</label>
                   <select
                     value={editingUpfront.chargeType}
                     onChange={(e) =>
-                      setEditingUpfront({ ...editingUpfront, chargeType: e.target.value as 'percentage' | 'fixed' })
+                      setEditingUpfront({ ...editingUpfront, chargeType: e.target.value as 'percentage' | 'fixed' | 'formula' })
                     }
                     className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
                   >
                     <option value="percentage">Percentage (%) of Loan Amount</option>
                     <option value="fixed">Fixed Rupee Amount (₹)</option>
+                    <option value="formula">Custom Formula Calculation</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="font-bold block mb-1">Component Name</label>
+                <label className="font-bold block mb-1">Charge Component Name</label>
                 <input
                   type="text"
                   required
@@ -1849,21 +2049,136 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold block mb-1">
-                    {editingUpfront.chargeType === 'percentage' ? 'Default Percentage (%)' : 'Default Fixed Rupee Amount (₹)'}
-                  </label>
+                  <label className="font-bold block mb-1">Percentage (%) Rate</label>
                   <input
                     type="number"
                     step="0.01"
-                    required
-                    value={editingUpfront.defaultValue}
-                    onChange={(e) => setEditingUpfront({ ...editingUpfront, defaultValue: Number(e.target.value) })}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-black text-blue-900 dark:text-blue-300"
+                    value={editingUpfront.percentage ?? (editingUpfront.chargeType === 'percentage' ? editingUpfront.defaultValue : 0)}
+                    onChange={(e) =>
+                      setEditingUpfront({
+                        ...editingUpfront,
+                        percentage: Number(e.target.value),
+                        defaultValue: editingUpfront.chargeType === 'percentage' ? Number(e.target.value) : editingUpfront.defaultValue,
+                      })
+                    }
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold text-purple-700 dark:text-purple-300"
                   />
                 </div>
 
                 <div>
-                  <label className="font-bold block mb-1">Charge Inclusion</label>
+                  <label className="font-bold block mb-1">Fixed Amount (₹)</label>
+                  <input
+                    type="number"
+                    step="1"
+                    value={editingUpfront.fixedAmount ?? (editingUpfront.chargeType === 'fixed' ? editingUpfront.defaultValue : 0)}
+                    onChange={(e) =>
+                      setEditingUpfront({
+                        ...editingUpfront,
+                        fixedAmount: Number(e.target.value),
+                        defaultValue: editingUpfront.chargeType === 'fixed' ? Number(e.target.value) : editingUpfront.defaultValue,
+                      })
+                    }
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold text-emerald-700 dark:text-emerald-300"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold block mb-1">Calculation Formula</label>
+                  <input
+                    type="text"
+                    value={editingUpfront.formula || editingUpfront.description || ''}
+                    onChange={(e) => setEditingUpfront({ ...editingUpfront, formula: e.target.value, description: e.target.value })}
+                    placeholder="e.g. Loan Amount × PF%"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold block mb-1">Rule Basis</label>
+                  <input
+                    type="text"
+                    value={editingUpfront.ruleBasis || ''}
+                    onChange={(e) => setEditingUpfront({ ...editingUpfront, ruleBasis: e.target.value })}
+                    placeholder="e.g. On Loan Amount / Fixed per Loan"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="font-bold block mb-1">Vehicle Category</label>
+                  <select
+                    value={editingUpfront.vehicleCategory || 'All Vehicles'}
+                    onChange={(e) => setEditingUpfront({ ...editingUpfront, vehicleCategory: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                  >
+                    <option value="All Vehicles">All Vehicles</option>
+                    <option value="Commuter">Commuter (&lt;125cc)</option>
+                    <option value="Sports">Sports (150-250cc)</option>
+                    <option value="Premium">Premium (300cc+)</option>
+                    <option value="EV">Electric (Chetak)</option>
+                    <option value="Commercial">Commercial / 3W</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold block mb-1">Tenure Scope</label>
+                  <select
+                    value={editingUpfront.tenureMonths || 'All Tenures'}
+                    onChange={(e) => setEditingUpfront({ ...editingUpfront, tenureMonths: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                  >
+                    <option value="All Tenures">All Tenures (12-60M)</option>
+                    <option value="12M">12 Months (1 Yr)</option>
+                    <option value="24M">24 Months (2 Yrs)</option>
+                    <option value="36M">36 Months (3 Yrs)</option>
+                    <option value="48M">48 Months (4 Yrs)</option>
+                    <option value="60M">60 Months (5 Yrs)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold block mb-1">Display Order</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingUpfront.displayOrder || 1}
+                    onChange={(e) => setEditingUpfront({ ...editingUpfront, displayOrder: Number(e.target.value) })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold block mb-1">Min Cap (₹)</label>
+                  <input
+                    type="number"
+                    value={editingUpfront.minCap || 0}
+                    onChange={(e) => setEditingUpfront({ ...editingUpfront, minCap: Number(e.target.value) })}
+                    placeholder="Optional minimum cap"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold block mb-1">Max Cap (₹)</label>
+                  <input
+                    type="number"
+                    value={editingUpfront.maxCap || 0}
+                    onChange={(e) => setEditingUpfront({ ...editingUpfront, maxCap: Number(e.target.value) })}
+                    placeholder="Optional maximum cap"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold block mb-1">Inclusion Rule</label>
                   <select
                     value={editingUpfront.isOptional ? 'optional' : 'mandatory'}
                     onChange={(e) => setEditingUpfront({ ...editingUpfront, isOptional: e.target.value === 'optional' })}
@@ -1873,17 +2188,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <option value="optional">Optional (Customer can toggle on/off)</option>
                   </select>
                 </div>
-              </div>
 
-              <div>
-                <label className="font-bold block mb-1">Formula & Description</label>
-                <input
-                  type="text"
-                  value={editingUpfront.description}
-                  onChange={(e) => setEditingUpfront({ ...editingUpfront, description: e.target.value })}
-                  placeholder="e.g. Processing Fee = Loan Amount × PF%"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium"
-                />
+                <div>
+                  <label className="font-bold block mb-1">Master Status</label>
+                  <select
+                    value={editingUpfront.isActive ? 'active' : 'inactive'}
+                    onChange={(e) => setEditingUpfront({ ...editingUpfront, isActive: e.target.value === 'active' })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                  >
+                    <option value="active">Active (Include in Calculations)</option>
+                    <option value="inactive">Inactive / Disabled (Do Not Apply)</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-2 pt-4 border-t dark:border-slate-800">
@@ -1894,8 +2210,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 >
                   Cancel
                 </button>
-                <button type="submit" className="px-5 py-2 bg-[#024b9c] text-white rounded-xl font-extrabold shadow-md">
-                  Save Upfront Charge
+                <button type="submit" className="px-5 py-2 bg-[#024b9c] text-white rounded-xl font-extrabold shadow-md flex items-center space-x-1.5">
+                  <Save className="w-4 h-4" />
+                  <span>Save Upfront Charge</span>
                 </button>
               </div>
             </form>

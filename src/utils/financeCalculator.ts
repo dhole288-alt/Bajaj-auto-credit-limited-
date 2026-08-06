@@ -338,6 +338,7 @@ export function calculateTenureDetails(
   // Total Payable Amount = Down Payment + Remaining EMIs (tenure - advanceEmiCount)
   const remainingTenure = Math.max(0, tenure - advanceEmiCount);
   const totalPayableAmount = Math.max(0, Math.round(downPayment + (emi * remainingTenure)));
+  const totalOutflow = Math.max(0, Math.round((emi * tenure) + downPayment));
 
   return {
     tenureMonths: tenure,
@@ -359,6 +360,7 @@ export function calculateTenureDetails(
     priceMargin,
     downPayment,
     totalPayableAmount,
+    totalOutflow,
     ltvPercent: Math.round(ltvPercent * 100) / 100,
     upfrontBreakdownList,
     debugFormula: {
